@@ -121,7 +121,8 @@ export default function Campanhas() {
     data_inicio: '',
     data_fim: '',
     tipo_meta: 'quantidade',
-    grupo_campanha: '1', // Grupo padrão da campanha
+    grupo_campanha: '1',
+    // Grupo padrão da campanha
     fornecedores: '',
     marcas: '',
     familias: '',
@@ -129,10 +130,16 @@ export default function Campanhas() {
     produtos: '' // Novo campo para produtos específicos
   });
   const [lojasDisponiveis, setLojasDisponiveis] = useState<any[]>([]);
-  const [lojasParticipantes, setLojasParticipantes] = useState<{loja_id: number, codigo_loja: number, meta_quantidade: number, meta_valor: number, grupo_id: string}[]>([]);
+  const [lojasParticipantes, setLojasParticipantes] = useState<{
+    loja_id: number;
+    codigo_loja: number;
+    meta_quantidade: number;
+    meta_valor: number;
+    grupo_id: string;
+  }[]>([]);
   const [loadingLojas, setLoadingLojas] = useState(false);
   const [criandoCampanha, setCriandoCampanha] = useState(false);
-  
+
   // Estados para o formulário rápido de adição de lojas
   const [formRapido, setFormRapido] = useState({
     numeroLoja: '',
@@ -140,7 +147,7 @@ export default function Campanhas() {
     metaQuantidade: '',
     metaValor: ''
   });
-  
+
   // Estados para edição de campanhas
   const [campanhaEditando, setCampanhaEditando] = useState<any>(null);
   const [editandoCampanha, setEditandoCampanha] = useState(false);
@@ -161,7 +168,6 @@ export default function Campanhas() {
   useEffect(() => {
     buscarCampanhas();
   }, []);
-  
   useEffect(() => {
     if (view === 'criar') {
       carregarLojasDisponiveis();
@@ -174,16 +180,23 @@ export default function Campanhas() {
       if (!incluirInativas) {
         query = query.eq('status', 'ativa');
       }
-      const { data, error } = await query.order('data_fim', { ascending: true });
+      const {
+        data,
+        error
+      } = await query.order('data_fim', {
+        ascending: true
+      });
       if (error) throw error;
 
       // Buscar estatísticas para cada campanha
-      const campanhasComEstatisticas = await Promise.all((data || []).map(async (campanha) => {
+      const campanhasComEstatisticas = await Promise.all((data || []).map(async campanha => {
         // Buscar total de lojas participantes
-        const { count: totalLojas } = await supabase
-          .from('campanhas_vendas_lojas_participantes')
-          .select('*', { count: 'exact', head: true })
-          .eq('campanha_id', campanha.id);
+        const {
+          count: totalLojas
+        } = await supabase.from('campanhas_vendas_lojas_participantes').select('*', {
+          count: 'exact',
+          head: true
+        }).eq('campanha_id', campanha.id);
 
         // Buscar totais de vendas da API externa
         const filtros = {
@@ -196,28 +209,22 @@ export default function Campanhas() {
           filtroProduto: campanha.produtos?.toString() // Adicionar filtro por produto
         };
         const vendasApiExterna = await buscarVendasCampanha(filtros);
-        
         const totalRealizadoQuantidade = vendasApiExterna.reduce((sum, v) => sum + (v.TOTAL_QUANTIDADE || 0) - (v.TOTAL_QTD_DV || 0), 0);
         const totalRealizadoValor = vendasApiExterna.reduce((sum, v) => sum + (v.TOTAL_VALOR || 0) - (v.TOTAL_VLR_DV || 0), 0);
 
         // Buscar total das metas
-        const { data: metas } = await supabase
-          .from('campanhas_vendas_lojas_participantes')
-          .select('meta_quantidade, meta_valor')
-          .eq('campanha_id', campanha.id);
-        
-        const metaTotal = campanha.tipo_meta === 'quantidade' 
-          ? (metas || []).reduce((sum, m) => sum + (m.meta_quantidade || 0), 0)
-          : (metas || []).reduce((sum, m) => sum + (m.meta_valor || 0), 0);
-
+        const {
+          data: metas
+        } = await supabase.from('campanhas_vendas_lojas_participantes').select('meta_quantidade, meta_valor').eq('campanha_id', campanha.id);
+        const metaTotal = campanha.tipo_meta === 'quantidade' ? (metas || []).reduce((sum, m) => sum + (m.meta_quantidade || 0), 0) : (metas || []).reduce((sum, m) => sum + (m.meta_valor || 0), 0);
         return {
           id: campanha.id,
           nome: campanha.nome || '',
           descricao: campanha.descricao || '',
           data_inicio: campanha.data_inicio || '',
           data_fim: campanha.data_fim || '',
-          tipo_meta: (campanha.tipo_meta as 'quantidade' | 'valor') || 'quantidade',
-          status: (campanha.status as 'ativa' | 'inativa' | 'encerrada') || 'ativa',
+          tipo_meta: campanha.tipo_meta as 'quantidade' | 'valor' || 'quantidade',
+          status: campanha.status as 'ativa' | 'inativa' | 'encerrada' || 'ativa',
           sem_metas: campanha.sem_metas === '1',
           criado_por: campanha.criado_por || 0,
           total_lojas_participantes: totalLojas || 0,
@@ -237,25 +244,19 @@ export default function Campanhas() {
       setLoading(false);
     }
   };
-
   const carregarLojasDisponiveis = async () => {
     setLoadingLojas(true);
     try {
-      const { data, error } = await supabase
-        .from('lojas')
-        .select('*')
-        .order('numero');
+      const {
+        data,
+        error
+      } = await supabase.from('lojas').select('*').order('numero');
       if (error) throw error;
-      
+
       // Filtrar a loja "outras"
-      const lojasFiltered = (data || []).filter(loja => 
-        loja.nome.toLowerCase() !== 'outras' && 
-        loja.nome.toLowerCase() !== 'outro' &&
-        loja.numero !== '999'
-      );
-      
+      const lojasFiltered = (data || []).filter(loja => loja.nome.toLowerCase() !== 'outras' && loja.nome.toLowerCase() !== 'outro' && loja.numero !== '999');
       setLojasDisponiveis(lojasFiltered);
-      
+
       // Pré-selecionar todas as lojas automaticamente (exceto "outras")
       const lojasPreSelecionadas = lojasFiltered.map(loja => ({
         loja_id: loja.id,
@@ -264,7 +265,6 @@ export default function Campanhas() {
         meta_valor: 0,
         grupo_id: novaCampanha.grupo_campanha
       }));
-      
       setLojasParticipantes(lojasPreSelecionadas);
     } catch (error) {
       toast({
@@ -276,7 +276,6 @@ export default function Campanhas() {
       setLoadingLojas(false);
     }
   };
-
   const adicionarLoja = (loja: any) => {
     if (lojasParticipantes.find(l => l.loja_id === loja.id)) {
       toast({
@@ -286,7 +285,6 @@ export default function Campanhas() {
       });
       return;
     }
-
     setLojasParticipantes(prev => [...prev, {
       loja_id: loja.id,
       codigo_loja: parseInt(loja.numero),
@@ -295,21 +293,18 @@ export default function Campanhas() {
       grupo_id: novaCampanha.grupo_campanha // Usar o grupo selecionado da campanha
     }]);
   };
-
   const removerLoja = (lojaId: number) => {
     setLojasParticipantes(prev => prev.filter(l => l.loja_id !== lojaId));
   };
-
   const atualizarMetaLoja = (lojaId: number, campo: 'meta_quantidade' | 'meta_valor', valor: number) => {
-    setLojasParticipantes(prev => prev.map(l => 
-      l.loja_id === lojaId ? { ...l, [campo]: valor } : l
-    ));
+    setLojasParticipantes(prev => prev.map(l => l.loja_id === lojaId ? {
+      ...l,
+      [campo]: valor
+    } : l));
   };
-
   const buscarLojaPorNumero = (numero: string) => {
     return lojasDisponiveis.find(loja => loja.numero === numero);
   };
-
   const adicionarLojaRapido = () => {
     if (!formRapido.numeroLoja) {
       toast({
@@ -319,7 +314,6 @@ export default function Campanhas() {
       });
       return;
     }
-
     const loja = buscarLojaPorNumero(formRapido.numeroLoja);
     if (!loja) {
       toast({
@@ -329,7 +323,6 @@ export default function Campanhas() {
       });
       return;
     }
-
     if (lojasParticipantes.find(l => l.loja_id === loja.id)) {
       toast({
         title: "Aviso",
@@ -338,7 +331,6 @@ export default function Campanhas() {
       });
       return;
     }
-
     const novaLoja = {
       loja_id: loja.id,
       codigo_loja: parseInt(loja.numero),
@@ -346,9 +338,8 @@ export default function Campanhas() {
       meta_valor: parseFloat(formRapido.metaValor) || 0,
       grupo_id: formRapido.grupo
     };
-
     setLojasParticipantes(prev => [...prev, novaLoja]);
-    
+
     // Limpar formulário
     setFormRapido({
       numeroLoja: '',
@@ -356,13 +347,11 @@ export default function Campanhas() {
       metaQuantidade: '',
       metaValor: ''
     });
-
     toast({
       title: "Sucesso",
-      description: `Loja ${loja.numero} - ${loja.nome} adicionada`,
+      description: `Loja ${loja.numero} - ${loja.nome} adicionada`
     });
   };
-
   const resetarFormRapido = () => {
     setFormRapido({
       numeroLoja: '',
@@ -371,30 +360,23 @@ export default function Campanhas() {
       metaValor: ''
     });
   };
-
   const excluirCampanha = async (campanhaId: number) => {
     if (!confirm('Tem certeza que deseja excluir esta campanha? Esta ação não pode ser desfeita.')) {
       return;
     }
-
     setEditandoCampanha(true);
     try {
       // Primeiro, excluir todos os participantes da campanha
-      const { error: erroParticipantes } = await supabase
-        .from('campanhas_vendas_lojas_participantes')
-        .delete()
-        .eq('campanha_id', campanhaId);
-
+      const {
+        error: erroParticipantes
+      } = await supabase.from('campanhas_vendas_lojas_participantes').delete().eq('campanha_id', campanhaId);
       if (erroParticipantes) throw erroParticipantes;
 
       // Depois, excluir a campanha
-      const { error: erroCampanha } = await supabase
-        .from('campanhas_vendas_lojas')
-        .delete()
-        .eq('id', campanhaId);
-
+      const {
+        error: erroCampanha
+      } = await supabase.from('campanhas_vendas_lojas').delete().eq('id', campanhaId);
       if (erroCampanha) throw erroCampanha;
-
       toast({
         title: "Sucesso",
         description: "Campanha excluída com sucesso"
@@ -405,7 +387,6 @@ export default function Campanhas() {
       setLojasParticipantes([]);
       setView('lista');
       buscarCampanhas();
-
     } catch (error) {
       console.error('Erro ao excluir campanha:', error);
       toast({
@@ -417,7 +398,6 @@ export default function Campanhas() {
       setEditandoCampanha(false);
     }
   };
-
   const criarCampanha = async () => {
     if (!novaCampanha.nome || !novaCampanha.data_inicio || !novaCampanha.data_fim) {
       toast({
@@ -427,7 +407,6 @@ export default function Campanhas() {
       });
       return;
     }
-
     if (lojasParticipantes.length === 0) {
       toast({
         title: "Erro",
@@ -436,29 +415,25 @@ export default function Campanhas() {
       });
       return;
     }
-
     setCriandoCampanha(true);
     try {
       const campanhaId = Date.now();
       // Criar campanha
-      const { data: campanhaCriada, error: erroCampanha } = await supabase
-        .from('campanhas_vendas_lojas')
-        .insert([{
-          id: campanhaId,
-          nome: novaCampanha.nome,
-          descricao: novaCampanha.descricao,
-          data_inicio: novaCampanha.data_inicio,
-          data_fim: novaCampanha.data_fim,
-          tipo_meta: novaCampanha.tipo_meta,
-          status: 'ativa',
-          sem_metas: '0',
-          criado_por: 1
-        }] as any)
-        .select()
-        .single();
-
+      const {
+        data: campanhaCriada,
+        error: erroCampanha
+      } = await supabase.from('campanhas_vendas_lojas').insert([{
+        id: campanhaId,
+        nome: novaCampanha.nome,
+        descricao: novaCampanha.descricao,
+        data_inicio: novaCampanha.data_inicio,
+        data_fim: novaCampanha.data_fim,
+        tipo_meta: novaCampanha.tipo_meta,
+        status: 'ativa',
+        sem_metas: '0',
+        criado_por: 1
+      }] as any).select().single();
       if (erroCampanha) throw erroCampanha;
-
       const baseId = Date.now();
       // Adicionar lojas participantes  
       const participantesData = lojasParticipantes.map((loja, idx) => ({
@@ -473,20 +448,17 @@ export default function Campanhas() {
         grupo_id: loja.grupo_id.toString(),
         status: 'ativa'
       }));
-
-      const { error: erroParticipantes } = await supabase
-        .from('campanhas_vendas_lojas_participantes')
-        .insert(participantesData as any);
-
+      const {
+        error: erroParticipantes
+      } = await supabase.from('campanhas_vendas_lojas_participantes').insert(participantesData as any);
       if (erroParticipantes) throw erroParticipantes;
-
       toast({
         title: "Sucesso",
         description: "Campanha criada com sucesso"
       });
 
       // Resetar formulário
-        setNovaCampanha({
+      setNovaCampanha({
         nome: '',
         descricao: '',
         data_inicio: '',
@@ -514,26 +486,22 @@ export default function Campanhas() {
       setCriandoCampanha(false);
     }
   };
-  
   const iniciarEdicaoCampanha = async (campanha: any) => {
     try {
       // Buscar dados completos da campanha
-      const { data: campanhaCompleta, error: erroCampanha } = await supabase
-        .from('campanhas_vendas_lojas')
-        .select('*')
-        .eq('id', campanha.id)
-        .single();
-        
+      const {
+        data: campanhaCompleta,
+        error: erroCampanha
+      } = await supabase.from('campanhas_vendas_lojas').select('*').eq('id', campanha.id).single();
       if (erroCampanha) throw erroCampanha;
-      
+
       // Buscar participantes da campanha
-      const { data: participantes, error: erroParticipantes } = await supabase
-        .from('campanhas_vendas_lojas_participantes')
-        .select('*')
-        .eq('campanha_id', campanha.id);
-        
+      const {
+        data: participantes,
+        error: erroParticipantes
+      } = await supabase.from('campanhas_vendas_lojas_participantes').select('*').eq('campanha_id', campanha.id);
       if (erroParticipantes) throw erroParticipantes;
-      
+
       // Mapear participantes para o formato esperado
       const lojasParticipantesFormatadas = participantes?.map(p => ({
         loja_id: p.loja_id,
@@ -542,7 +510,7 @@ export default function Campanhas() {
         meta_valor: p.meta_valor || 0,
         grupo_id: p.grupo_id || '1'
       })) || [];
-      
+
       // Definir campanha para edição
       setCampanhaEditando({
         id: campanhaCompleta.id,
@@ -551,18 +519,17 @@ export default function Campanhas() {
         data_inicio: campanhaCompleta.data_inicio || '',
         data_fim: campanhaCompleta.data_fim || '',
         tipo_meta: campanhaCompleta.tipo_meta || 'quantidade',
-        grupo_campanha: '1', // usar grupo padrão por agora
+        grupo_campanha: '1',
+        // usar grupo padrão por agora
         fornecedores: campanhaCompleta.fornecedores?.toString() || '',
         marcas: campanhaCompleta.marcas?.toString() || '',
         familias: campanhaCompleta.familias?.toString() || '',
         grupos_produtos: campanhaCompleta.grupos_produtos?.toString() || '',
         produtos: campanhaCompleta.produtos || ''
       });
-      
       setLojasParticipantes(lojasParticipantesFormatadas);
       await carregarLojasDisponiveis();
       setView('editar');
-      
     } catch (error) {
       console.error('Erro ao carregar campanha para edição:', error);
       toast({
@@ -572,10 +539,9 @@ export default function Campanhas() {
       });
     }
   };
-  
   const salvarEdicaoCampanha = async () => {
     if (!campanhaEditando) return;
-    
+
     // Validar campos obrigatórios
     if (!campanhaEditando.nome || !campanhaEditando.data_inicio || !campanhaEditando.data_fim) {
       toast({
@@ -585,43 +551,37 @@ export default function Campanhas() {
       });
       return;
     }
-
     if (lojasParticipantes.length === 0) {
       toast({
-        title: "Erro", 
+        title: "Erro",
         description: "Adicione pelo menos uma loja participante",
         variant: "destructive"
       });
       return;
     }
-
     setEditandoCampanha(true);
     try {
       // Atualizar campanha
-      const { error: erroCampanha } = await supabase
-        .from('campanhas_vendas_lojas')
-        .update({
-          nome: campanhaEditando.nome,
-          descricao: campanhaEditando.descricao,
-          data_inicio: campanhaEditando.data_inicio,
-          data_fim: campanhaEditando.data_fim,
-          tipo_meta: campanhaEditando.tipo_meta,
-          fornecedores: campanhaEditando.fornecedores || null,
-          marcas: campanhaEditando.marcas || null,
-          familias: campanhaEditando.familias || null,
-          grupos_produtos: campanhaEditando.grupos_produtos || null,
-          produtos: campanhaEditando.produtos || null
-        })
-        .eq('id', campanhaEditando.id);
-
+      const {
+        error: erroCampanha
+      } = await supabase.from('campanhas_vendas_lojas').update({
+        nome: campanhaEditando.nome,
+        descricao: campanhaEditando.descricao,
+        data_inicio: campanhaEditando.data_inicio,
+        data_fim: campanhaEditando.data_fim,
+        tipo_meta: campanhaEditando.tipo_meta,
+        fornecedores: campanhaEditando.fornecedores || null,
+        marcas: campanhaEditando.marcas || null,
+        familias: campanhaEditando.familias || null,
+        grupos_produtos: campanhaEditando.grupos_produtos || null,
+        produtos: campanhaEditando.produtos || null
+      }).eq('id', campanhaEditando.id);
       if (erroCampanha) throw erroCampanha;
 
       // Remover participantes existentes
-      const { error: erroRemocao } = await supabase
-        .from('campanhas_vendas_lojas_participantes')
-        .delete()
-        .eq('campanha_id', campanhaEditando.id);
-
+      const {
+        error: erroRemocao
+      } = await supabase.from('campanhas_vendas_lojas_participantes').delete().eq('campanha_id', campanhaEditando.id);
       if (erroRemocao) throw erroRemocao;
 
       // Adicionar novos participantes
@@ -638,13 +598,10 @@ export default function Campanhas() {
         grupo_id: loja.grupo_id.toString(),
         status: 'ativa'
       }));
-
-      const { error: erroParticipantes } = await supabase
-        .from('campanhas_vendas_lojas_participantes')
-        .insert(participantesData as any);
-
+      const {
+        error: erroParticipantes
+      } = await supabase.from('campanhas_vendas_lojas_participantes').insert(participantesData as any);
       if (erroParticipantes) throw erroParticipantes;
-
       toast({
         title: "Sucesso",
         description: "Campanha atualizada com sucesso"
@@ -655,7 +612,6 @@ export default function Campanhas() {
       setLojasParticipantes([]);
       setView('lista');
       buscarCampanhas();
-      
     } catch (error) {
       console.error('Erro ao atualizar campanha:', error);
       toast({
@@ -667,7 +623,6 @@ export default function Campanhas() {
       setEditandoCampanha(false);
     }
   };
-  
   const buscarVendasApiExterna = async (campanha: any) => {
     setLoadingApiExterna(true);
     try {
@@ -914,57 +869,31 @@ export default function Campanhas() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="dataInicio" className="text-sm font-medium">Data Início</Label>
-              <Input 
-                id="dataInicio" 
-                type="date" 
-                value={filtroData.dataInicio} 
-                onChange={e => setFiltroData(prev => ({
-                  ...prev,
-                  dataInicio: e.target.value
-                }))} 
-                className="mt-1"
-              />
+              <Input id="dataInicio" type="date" value={filtroData.dataInicio} onChange={e => setFiltroData(prev => ({
+              ...prev,
+              dataInicio: e.target.value
+            }))} className="mt-1" />
             </div>
             <div>
               <Label htmlFor="dataFim" className="text-sm font-medium">Data Fim</Label>
-              <Input 
-                id="dataFim" 
-                type="date" 
-                value={filtroData.dataFim} 
-                onChange={e => setFiltroData(prev => ({
-                  ...prev,
-                  dataFim: e.target.value
-                }))} 
-                className="mt-1"
-              />
+              <Input id="dataFim" type="date" value={filtroData.dataFim} onChange={e => setFiltroData(prev => ({
+              ...prev,
+              dataFim: e.target.value
+            }))} className="mt-1" />
             </div>
             <div className="flex items-end">
-              <Button 
-                onClick={buscarCampanhas} 
-                className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-                size="default"
-              >
+              <Button onClick={buscarCampanhas} className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90" size="default">
                 <Target size={16} />
                 Buscar Campanhas
               </Button>
             </div>
           </div>
           <div className="flex gap-2 pt-2 border-t">
-            <Button 
-              variant={!incluirInativas ? "default" : "outline"} 
-              onClick={() => setIncluirInativas(false)} 
-              className={`gap-2 ${!incluirInativas ? 'bg-primary text-primary-foreground' : 'border-primary text-primary hover:bg-primary hover:text-primary-foreground'}`}
-              size="sm"
-            >
+            <Button variant={!incluirInativas ? "default" : "outline"} onClick={() => setIncluirInativas(false)} className={`gap-2 ${!incluirInativas ? 'bg-primary text-primary-foreground' : 'border-primary text-primary hover:bg-primary hover:text-primary-foreground'}`} size="sm">
               <CheckCircle size={14} />
               Apenas Ativas
             </Button>
-            <Button 
-              variant={incluirInativas ? "default" : "outline"} 
-              onClick={() => setIncluirInativas(true)}
-              className={`gap-2 ${incluirInativas ? 'bg-primary text-primary-foreground' : 'border-primary text-primary hover:bg-primary hover:text-primary-foreground'}`}
-              size="sm"
-            >
+            <Button variant={incluirInativas ? "default" : "outline"} onClick={() => setIncluirInativas(true)} className={`gap-2 ${incluirInativas ? 'bg-primary text-primary-foreground' : 'border-primary text-primary hover:bg-primary hover:text-primary-foreground'}`} size="sm">
               <Clock size={14} />
               Todas as Campanhas
             </Button>
@@ -972,13 +901,10 @@ export default function Campanhas() {
         </CardContent>
       </Card>
 
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-12">
+      {loading ? <div className="flex flex-col items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
           <p className="text-muted-foreground">Carregando campanhas...</p>
-        </div>
-      ) : campanhas.length === 0 ? (
-        <Card className="shadow-sm">
+        </div> : campanhas.length === 0 ? <Card className="shadow-sm">
           <CardContent className="text-center py-12">
             <ChartLine className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Nenhuma campanha encontrada</h3>
@@ -990,9 +916,7 @@ export default function Campanhas() {
               Criar Primeira Campanha
             </Button>
           </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
+        </Card> : <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">
               {campanhas.length} {campanhas.length === 1 ? 'campanha encontrada' : 'campanhas encontradas'}
@@ -1005,20 +929,16 @@ export default function Campanhas() {
           
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {campanhas.map(campanha => {
-              const realizadoTotal = campanha.tipo_meta === 'quantidade' ? campanha.total_realizado_quantidade || 0 : campanha.total_realizado_valor || 0;
-              const progresso = calcularProgresso(realizadoTotal, campanha.meta_total || 0, campanha.data_inicio, campanha.data_fim);
-              
-              return (
-                <Card key={campanha.id} className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-primary/20 hover:border-l-primary">
+          const realizadoTotal = campanha.tipo_meta === 'quantidade' ? campanha.total_realizado_quantidade || 0 : campanha.total_realizado_valor || 0;
+          const progresso = calcularProgresso(realizadoTotal, campanha.meta_total || 0, campanha.data_inicio, campanha.data_fim);
+          return <Card key={campanha.id} className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-primary/20 hover:border-l-primary">
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start">
                       <div className="space-y-1">
                         <CardTitle className="text-lg leading-tight">{campanha.nome}</CardTitle>
-                        {campanha.descricao && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
+                        {campanha.descricao && <p className="text-sm text-muted-foreground line-clamp-2">
                             {campanha.descricao}
-                          </p>
-                        )}
+                          </p>}
                       </div>
                       <StatusBadge status={campanha.status === 'ativa' ? 'atingido' : 'pendente'} />
                     </div>
@@ -1038,17 +958,12 @@ export default function Campanhas() {
                       <div className="space-y-1">
                         <span className="text-muted-foreground">Tipo:</span>
                         <div className="font-medium capitalize flex items-center gap-1">
-                          {campanha.tipo_meta === 'quantidade' ? (
-                            <><Target size={12} /> Quantidade</>
-                          ) : (
-                            <><TrendingUp size={12} /> Valor</>
-                          )}
+                          {campanha.tipo_meta === 'quantidade' ? <><Target size={12} /> Quantidade</> : <><TrendingUp size={12} /> Valor</>}
                         </div>
                       </div>
                     </div>
 
-                    {!campanha.sem_metas && (
-                      <div className="space-y-3">
+                    {!campanha.sem_metas && <div className="space-y-3">
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-muted-foreground">Progresso</span>
                           <span className="font-medium">{progresso.percentualRealizado.toFixed(1)}%</span>
@@ -1058,39 +973,26 @@ export default function Campanhas() {
                           <span>{formatarValor(progresso.realizado, campanha.tipo_meta)} realizado</span>
                           <span>Meta: {formatarValor(progresso.meta, campanha.tipo_meta)}</span>
                         </div>
-                      </div>
-                    )}
+                      </div>}
 
                     <div className="flex gap-2 pt-2 border-t">
-                      <Button 
-                        variant="secondary" 
-                        size="sm" 
-                        onClick={() => {
-                          setView('detalhes');
-                          buscarDetalheCampanha(campanha.id);
-                        }} 
-                        className="flex-1 gap-1"
-                      >
+                      <Button variant="secondary" size="sm" onClick={() => {
+                  setView('detalhes');
+                  buscarDetalheCampanha(campanha.id);
+                }} className="flex-1 gap-1">
                         <Eye size={14} />
                         Detalhes
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="gap-1" 
-                        onClick={() => iniciarEdicaoCampanha(campanha)}
-                      >
+                      <Button size="sm" variant="outline" className="gap-1" onClick={() => iniciarEdicaoCampanha(campanha)}>
                         <Edit size={14} />
                         Editar
                       </Button>
                     </div>
                   </CardContent>
-                </Card>
-              );
-            })}
+                </Card>;
+        })}
           </div>
-        </div>
-      )}
+        </div>}
     </div>;
   const renderDetalhes = () => {
     if (!campanhaSelecionada) return null;
@@ -1174,7 +1076,7 @@ export default function Campanhas() {
                 if (index === 0) medalha = '🥇';else if (index === 1) medalha = '🥈';else if (index === 2) medalha = '🥉';else medalha = `${index + 1}º`;
                 return <div key={loja.id} className="flex items-center justify-between py-1 px-2 bg-muted/30 rounded text-sm">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <div className="flex items-center justify-center min-w-[24px] h-6 rounded-full bg-secondary text-secondary-foreground font-bold text-xs border border-secondary-foreground/20">
+                          <div className="flex items-center justify-center min-w-[24px] h-6 rounded-full text-secondary-foreground font-bold text-xs border border-secondary-foreground/20 bg-gray-200">
                             {index < 3 ? <span className="text-xs">{medalha}</span> : <span className="text-[10px]">{medalha}</span>}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -1348,41 +1250,32 @@ export default function Campanhas() {
               <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
                 <div className="space-y-2">
                   <Label htmlFor="numeroLoja">Número da Loja *</Label>
-                  <Input
-                    id="numeroLoja"
-                    type="text"
-                    value={formRapido.numeroLoja}
-                    onChange={(e) => setFormRapido(prev => ({ ...prev, numeroLoja: e.target.value }))}
-                    placeholder="Ex: 22"
-                    className="text-center font-medium"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const loja = buscarLojaPorNumero(formRapido.numeroLoja);
-                        if (loja) {
-                          document.getElementById('grupoLoja')?.focus();
-                        }
-                      }
-                    }}
-                  />
-                  {formRapido.numeroLoja && buscarLojaPorNumero(formRapido.numeroLoja) && (
-                    <div className="text-sm text-primary font-medium">
+                  <Input id="numeroLoja" type="text" value={formRapido.numeroLoja} onChange={e => setFormRapido(prev => ({
+                  ...prev,
+                  numeroLoja: e.target.value
+                }))} placeholder="Ex: 22" className="text-center font-medium" onKeyPress={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const loja = buscarLojaPorNumero(formRapido.numeroLoja);
+                    if (loja) {
+                      document.getElementById('grupoLoja')?.focus();
+                    }
+                  }
+                }} />
+                  {formRapido.numeroLoja && buscarLojaPorNumero(formRapido.numeroLoja) && <div className="text-sm text-primary font-medium">
                       {buscarLojaPorNumero(formRapido.numeroLoja)?.numero} - {buscarLojaPorNumero(formRapido.numeroLoja)?.nome}
-                    </div>
-                  )}
-                  {formRapido.numeroLoja && !buscarLojaPorNumero(formRapido.numeroLoja) && (
-                    <div className="text-sm text-destructive">
+                    </div>}
+                  {formRapido.numeroLoja && !buscarLojaPorNumero(formRapido.numeroLoja) && <div className="text-sm text-destructive">
                       Loja não encontrada
-                    </div>
-                  )}
+                    </div>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="grupoLoja">Grupo *</Label>
-                  <Select 
-                    value={formRapido.grupo} 
-                    onValueChange={(value) => setFormRapido(prev => ({ ...prev, grupo: value }))}
-                  >
+                  <Select value={formRapido.grupo} onValueChange={value => setFormRapido(prev => ({
+                  ...prev,
+                  grupo: value
+                }))}>
                     <SelectTrigger id="grupoLoja" className="bg-background">
                       <SelectValue />
                     </SelectTrigger>
@@ -1396,45 +1289,26 @@ export default function Campanhas() {
 
                 <div className="space-y-2">
                   <Label htmlFor="metaQtd">Meta Quantidade</Label>
-                  <Input
-                    id="metaQtd"
-                    type="number"
-                    value={formRapido.metaQuantidade}
-                    onChange={(e) => setFormRapido(prev => ({ ...prev, metaQuantidade: e.target.value }))}
-                    placeholder="0"
-                    min="0"
-                  />
+                  <Input id="metaQtd" type="number" value={formRapido.metaQuantidade} onChange={e => setFormRapido(prev => ({
+                  ...prev,
+                  metaQuantidade: e.target.value
+                }))} placeholder="0" min="0" />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="metaValor">Meta Valor (R$)</Label>
-                  <Input
-                    id="metaValor"
-                    type="number"
-                    step="0.01"
-                    value={formRapido.metaValor}
-                    onChange={(e) => setFormRapido(prev => ({ ...prev, metaValor: e.target.value }))}
-                    placeholder="0.00"
-                    min="0"
-                  />
+                  <Input id="metaValor" type="number" step="0.01" value={formRapido.metaValor} onChange={e => setFormRapido(prev => ({
+                  ...prev,
+                  metaValor: e.target.value
+                }))} placeholder="0.00" min="0" />
                 </div>
 
                 <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    onClick={adicionarLojaRapido}
-                    disabled={!formRapido.numeroLoja || !buscarLojaPorNumero(formRapido.numeroLoja)}
-                    className="gap-2"
-                  >
+                  <Button type="button" onClick={adicionarLojaRapido} disabled={!formRapido.numeroLoja || !buscarLojaPorNumero(formRapido.numeroLoja)} className="gap-2">
                     <Plus size={16} />
                     Adicionar
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={resetarFormRapido}
-                    size="sm"
-                  >
+                  <Button type="button" variant="outline" onClick={resetarFormRapido} size="sm">
                     Limpar
                   </Button>
                 </div>
@@ -1443,98 +1317,67 @@ export default function Campanhas() {
           </Card>
 
           {/* Botão para adicionar lojas restantes (caso o usuário tenha removido alguma) */}
-          {lojasDisponiveis.filter(loja => !lojasParticipantes.find(l => l.loja_id === loja.id)).length > 0 && (
-            <div className="space-y-2">
+          {lojasDisponiveis.filter(loja => !lojasParticipantes.find(l => l.loja_id === loja.id)).length > 0 && <div className="space-y-2">
               <Label>Ou escolha da lista completa</Label>
-              <Select onValueChange={(lojaId) => {
-                const loja = lojasDisponiveis.find(l => l.id === parseInt(lojaId));
-                if (loja) adicionarLoja(loja);
-              }}>
+              <Select onValueChange={lojaId => {
+            const loja = lojasDisponiveis.find(l => l.id === parseInt(lojaId));
+            if (loja) adicionarLoja(loja);
+          }}>
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Escolha uma loja para adicionar" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border z-50">
-                  {lojasDisponiveis
-                    .filter(loja => !lojasParticipantes.find(l => l.loja_id === loja.id))
-                    .map(loja => (
-                      <SelectItem key={loja.id} value={loja.id.toString()}>
+                  {lojasDisponiveis.filter(loja => !lojasParticipantes.find(l => l.loja_id === loja.id)).map(loja => <SelectItem key={loja.id} value={loja.id.toString()}>
                         {loja.numero} - {loja.nome} ({loja.regiao})
-                      </SelectItem>
-                    ))
-                  }
+                      </SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
-          )}
+            </div>}
 
           {/* Lista de lojas participantes */}
-          {lojasParticipantes.length > 0 && (
-            <div className="space-y-3">
+          {lojasParticipantes.length > 0 && <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>Lojas Participantes e Metas ({lojasParticipantes.length})</Label>
                 <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      // Selecionar todas as lojas (exceto "outras")
-                      const todasLojas = lojasDisponiveis
-                        .filter(loja => 
-                          loja.nome.toLowerCase() !== 'outras' && 
-                          loja.nome.toLowerCase() !== 'outro' &&
-                          loja.numero !== '999'
-                        )
-                        .map(loja => ({
-                          loja_id: loja.id,
-                          codigo_loja: parseInt(loja.numero),
-                          meta_quantidade: 0,
-                          meta_valor: 0,
-                          grupo_id: novaCampanha.grupo_campanha
-                        }));
-                      setLojasParticipantes(todasLojas);
-                    }}
-                  >
+                  <Button type="button" variant="outline" size="sm" onClick={() => {
+                // Selecionar todas as lojas (exceto "outras")
+                const todasLojas = lojasDisponiveis.filter(loja => loja.nome.toLowerCase() !== 'outras' && loja.nome.toLowerCase() !== 'outro' && loja.numero !== '999').map(loja => ({
+                  loja_id: loja.id,
+                  codigo_loja: parseInt(loja.numero),
+                  meta_quantidade: 0,
+                  meta_valor: 0,
+                  grupo_id: novaCampanha.grupo_campanha
+                }));
+                setLojasParticipantes(todasLojas);
+              }}>
                     Selecionar Todas
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setLojasParticipantes([])}
-                  >
+                  <Button type="button" variant="outline" size="sm" onClick={() => setLojasParticipantes([])}>
                     Limpar Todas
                   </Button>
                 </div>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {lojasParticipantes.map(lojaParticipante => {
-                  const loja = lojasDisponiveis.find(l => l.id === lojaParticipante.loja_id);
-                  return (
-                    <div key={lojaParticipante.loja_id} className="p-3 border rounded-lg">
+              const loja = lojasDisponiveis.find(l => l.id === lojaParticipante.loja_id);
+              return <div key={lojaParticipante.loja_id} className="p-3 border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <div className="font-medium">
                           {loja?.numero} - {loja?.nome}
                         </div>
-                        <Button 
-                          variant="destructive" 
-                          size="sm" 
-                          onClick={() => removerLoja(lojaParticipante.loja_id)}
-                        >
+                        <Button variant="destructive" size="sm" onClick={() => removerLoja(lojaParticipante.loja_id)}>
                           Remover
                         </Button>
                       </div>
                       <div className="grid grid-cols-3 gap-2">
                         <div>
                           <Label className="text-xs">Grupo</Label>
-                          <Select 
-                            value={lojaParticipante.grupo_id} 
-                            onValueChange={(value) => {
-                              setLojasParticipantes(prev => prev.map(l => 
-                                l.loja_id === lojaParticipante.loja_id ? { ...l, grupo_id: value } : l
-                              ));
-                            }}
-                          >
+                          <Select value={lojaParticipante.grupo_id} onValueChange={value => {
+                      setLojasParticipantes(prev => prev.map(l => l.loja_id === lojaParticipante.loja_id ? {
+                        ...l,
+                        grupo_id: value
+                      } : l));
+                    }}>
                             <SelectTrigger className="h-8">
                               <SelectValue />
                             </SelectTrigger>
@@ -1547,48 +1390,22 @@ export default function Campanhas() {
                         </div>
                         <div>
                           <Label className="text-xs">Meta Quantidade</Label>
-                          <Input
-                            type="number"
-                            placeholder="0"
-                            className="h-8"
-                            value={lojaParticipante.meta_quantidade}
-                            onChange={(e) => atualizarMetaLoja(
-                              lojaParticipante.loja_id, 
-                              'meta_quantidade', 
-                              parseInt(e.target.value) || 0
-                            )}
-                          />
+                          <Input type="number" placeholder="0" className="h-8" value={lojaParticipante.meta_quantidade} onChange={e => atualizarMetaLoja(lojaParticipante.loja_id, 'meta_quantidade', parseInt(e.target.value) || 0)} />
                         </div>
                         <div>
                           <Label className="text-xs">Meta Valor</Label>
-                          <Input
-                            type="number"
-                            placeholder="0.00"
-                            className="h-8"
-                            value={lojaParticipante.meta_valor}
-                            onChange={(e) => atualizarMetaLoja(
-                              lojaParticipante.loja_id, 
-                              'meta_valor', 
-                              parseFloat(e.target.value) || 0
-                            )}
-                          />
+                          <Input type="number" placeholder="0.00" className="h-8" value={lojaParticipante.meta_valor} onChange={e => atualizarMetaLoja(lojaParticipante.loja_id, 'meta_valor', parseFloat(e.target.value) || 0)} />
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    </div>;
+            })}
               </div>
-            </div>
-          )}
+            </div>}
         </CardContent>
       </Card>
 
       <div className="flex gap-4">
-        <Button 
-          className="gap-2" 
-          onClick={criarCampanha}
-          disabled={criandoCampanha}
-        >
+        <Button className="gap-2" onClick={criarCampanha} disabled={criandoCampanha}>
           <CheckCircle size={16} />
           {criandoCampanha ? 'Criando...' : 'Criar Campanha'}
         </Button>
@@ -1597,12 +1414,9 @@ export default function Campanhas() {
         </Button>
       </div>
     </div>;
-  
   const renderEditar = () => {
     if (!campanhaEditando) return null;
-    
-    return (
-      <div className="space-y-6">
+    return <div className="space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" onClick={() => setView('lista')} className="gap-2">
             <ArrowLeft size={16} />
@@ -1627,19 +1441,17 @@ export default function Campanhas() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="editNome">Nome da Campanha *</Label>
-                <Input
-                  id="editNome"
-                  value={campanhaEditando.nome}
-                  onChange={(e) => setCampanhaEditando(prev => ({ ...prev, nome: e.target.value }))}
-                  placeholder="Digite o nome da campanha"
-                />
+                <Input id="editNome" value={campanhaEditando.nome} onChange={e => setCampanhaEditando(prev => ({
+                ...prev,
+                nome: e.target.value
+              }))} placeholder="Digite o nome da campanha" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="editTipoMeta">Tipo de Meta *</Label>
-                <Select 
-                  value={campanhaEditando.tipo_meta} 
-                  onValueChange={(value) => setCampanhaEditando(prev => ({ ...prev, tipo_meta: value }))}
-                >
+                <Select value={campanhaEditando.tipo_meta} onValueChange={value => setCampanhaEditando(prev => ({
+                ...prev,
+                tipo_meta: value
+              }))}>
                   <SelectTrigger className="bg-background">
                     <SelectValue />
                   </SelectTrigger>
@@ -1653,42 +1465,35 @@ export default function Campanhas() {
 
             <div className="space-y-2">
               <Label htmlFor="editDescricao">Descrição</Label>
-              <Textarea
-                id="editDescricao"
-                value={campanhaEditando.descricao}
-                onChange={(e) => setCampanhaEditando(prev => ({ ...prev, descricao: e.target.value }))}
-                placeholder="Descreva os objetivos e critérios da campanha"
-                rows={3}
-              />
+              <Textarea id="editDescricao" value={campanhaEditando.descricao} onChange={e => setCampanhaEditando(prev => ({
+              ...prev,
+              descricao: e.target.value
+            }))} placeholder="Descreva os objetivos e critérios da campanha" rows={3} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="editDataInicio">Data de Início *</Label>
-                <Input
-                  id="editDataInicio"
-                  type="date"
-                  value={campanhaEditando.data_inicio}
-                  onChange={(e) => setCampanhaEditando(prev => ({ ...prev, data_inicio: e.target.value }))}
-                />
+                <Input id="editDataInicio" type="date" value={campanhaEditando.data_inicio} onChange={e => setCampanhaEditando(prev => ({
+                ...prev,
+                data_inicio: e.target.value
+              }))} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="editDataFim">Data de Fim *</Label>
-                <Input
-                  id="editDataFim"
-                  type="date"
-                  value={campanhaEditando.data_fim}
-                  onChange={(e) => setCampanhaEditando(prev => ({ ...prev, data_fim: e.target.value }))}
-                />
+                <Input id="editDataFim" type="date" value={campanhaEditando.data_fim} onChange={e => setCampanhaEditando(prev => ({
+                ...prev,
+                data_fim: e.target.value
+              }))} />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="editGrupoCampanha">Grupo da Campanha</Label>
-              <Select 
-                value={campanhaEditando.grupo_campanha} 
-                onValueChange={(value) => setCampanhaEditando(prev => ({ ...prev, grupo_campanha: value }))}
-              >
+              <Select value={campanhaEditando.grupo_campanha} onValueChange={value => setCampanhaEditando(prev => ({
+              ...prev,
+              grupo_campanha: value
+            }))}>
                 <SelectTrigger className="bg-background">
                   <SelectValue />
                 </SelectTrigger>
@@ -1712,27 +1517,17 @@ export default function Campanhas() {
           <CardContent className="space-y-4">
             {/* Botões de ação */}
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  // Selecionar todas as lojas (exceto "outras")
-                  const todasLojas = lojasDisponiveis
-                    .filter(loja => 
-                      loja.nome.toLowerCase() !== 'outras' && 
-                      loja.nome.toLowerCase() !== 'outro' &&
-                      loja.numero !== '999'
-                    )
-                    .map(loja => ({
-                      loja_id: loja.id,
-                      codigo_loja: parseInt(loja.numero),
-                      meta_quantidade: 0,
-                      meta_valor: 0,
-                      grupo_id: campanhaEditando.grupo_campanha || '1'
-                    }));
-                  setLojasParticipantes(todasLojas);
-                }}
-              >
+              <Button variant="outline" size="sm" onClick={() => {
+              // Selecionar todas as lojas (exceto "outras")
+              const todasLojas = lojasDisponiveis.filter(loja => loja.nome.toLowerCase() !== 'outras' && loja.nome.toLowerCase() !== 'outro' && loja.numero !== '999').map(loja => ({
+                loja_id: loja.id,
+                codigo_loja: parseInt(loja.numero),
+                meta_quantidade: 0,
+                meta_valor: 0,
+                grupo_id: campanhaEditando.grupo_campanha || '1'
+              }));
+              setLojasParticipantes(todasLojas);
+            }}>
                 Selecionar Todas
               </Button>
               <Button variant="outline" size="sm" onClick={() => setLojasParticipantes([])}>
@@ -1741,12 +1536,10 @@ export default function Campanhas() {
             </div>
 
             {/* Lista de lojas participantes */}
-            {lojasParticipantes.length > 0 && (
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+            {lojasParticipantes.length > 0 && <div className="space-y-2 max-h-60 overflow-y-auto">
                 {lojasParticipantes.map((loja, index) => {
-                  const lojaInfo = lojasDisponiveis.find(l => l.id === loja.loja_id);
-                  return (
-                    <Card key={index} className="p-3">
+              const lojaInfo = lojasDisponiveis.find(l => l.id === loja.loja_id);
+              return <Card key={index} className="p-3">
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
                         <div>
                           <span className="font-medium">{lojaInfo?.numero}</span>
@@ -1754,81 +1547,54 @@ export default function Campanhas() {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Meta Quantidade</Label>
-                          <Input
-                            type="number"
-                            value={loja.meta_quantidade}
-                            onChange={(e) => {
-                              const novasLojas = [...lojasParticipantes];
-                              novasLojas[index].meta_quantidade = parseInt(e.target.value) || 0;
-                              setLojasParticipantes(novasLojas);
-                            }}
-                            className="h-8"
-                          />
+                          <Input type="number" value={loja.meta_quantidade} onChange={e => {
+                      const novasLojas = [...lojasParticipantes];
+                      novasLojas[index].meta_quantidade = parseInt(e.target.value) || 0;
+                      setLojasParticipantes(novasLojas);
+                    }} className="h-8" />
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Meta Valor (R$)</Label>
-                          <Input
-                            type="number"
-                            value={loja.meta_valor}
-                            onChange={(e) => {
-                              const novasLojas = [...lojasParticipantes];
-                              novasLojas[index].meta_valor = parseFloat(e.target.value) || 0;
-                              setLojasParticipantes(novasLojas);
-                            }}
-                            className="h-8"
-                          />
+                          <Input type="number" value={loja.meta_valor} onChange={e => {
+                      const novasLojas = [...lojasParticipantes];
+                      novasLojas[index].meta_valor = parseFloat(e.target.value) || 0;
+                      setLojasParticipantes(novasLojas);
+                    }} className="h-8" />
                         </div>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            const novasLojas = lojasParticipantes.filter((_, i) => i !== index);
-                            setLojasParticipantes(novasLojas);
-                          }}
-                        >
+                        <Button variant="destructive" size="sm" onClick={() => {
+                    const novasLojas = lojasParticipantes.filter((_, i) => i !== index);
+                    setLojasParticipantes(novasLojas);
+                  }}>
                           <X size={14} />
                         </Button>
                       </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+                    </Card>;
+            })}
+              </div>}
 
             {/* Dropdown para adicionar lojas */}
             <div className="space-y-2">
               <Label>Adicionar Loja</Label>
-              <Select
-                onValueChange={(value) => {
-                  const lojaId = parseInt(value);
-                  const loja = lojasDisponiveis.find(l => l.id === lojaId);
-                  if (loja && !lojasParticipantes.some(p => p.loja_id === lojaId)) {
-                    setLojasParticipantes(prev => [...prev, {
-                      loja_id: lojaId,
-                      codigo_loja: parseInt(loja.numero),
-                      meta_quantidade: 0,
-                      meta_valor: 0,
-                      grupo_id: campanhaEditando.grupo_campanha || '1'
-                    }]);
-                  }
-                }}
-              >
+              <Select onValueChange={value => {
+              const lojaId = parseInt(value);
+              const loja = lojasDisponiveis.find(l => l.id === lojaId);
+              if (loja && !lojasParticipantes.some(p => p.loja_id === lojaId)) {
+                setLojasParticipantes(prev => [...prev, {
+                  loja_id: lojaId,
+                  codigo_loja: parseInt(loja.numero),
+                  meta_quantidade: 0,
+                  meta_valor: 0,
+                  grupo_id: campanhaEditando.grupo_campanha || '1'
+                }]);
+              }
+            }}>
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Selecione uma loja para adicionar" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border z-50">
-                  {lojasDisponiveis
-                    .filter(loja => 
-                      !lojasParticipantes.some(p => p.loja_id === loja.id) &&
-                      loja.nome.toLowerCase() !== 'outras' && 
-                      loja.nome.toLowerCase() !== 'outro' &&
-                      loja.numero !== '999'
-                    )
-                    .map(loja => (
-                      <SelectItem key={loja.id} value={loja.id.toString()}>
+                  {lojasDisponiveis.filter(loja => !lojasParticipantes.some(p => p.loja_id === loja.id) && loja.nome.toLowerCase() !== 'outras' && loja.nome.toLowerCase() !== 'outro' && loja.numero !== '999').map(loja => <SelectItem key={loja.id} value={loja.id.toString()}>
                         {loja.numero} - {loja.nome}
-                      </SelectItem>
-                    ))}
+                      </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -1838,11 +1604,7 @@ export default function Campanhas() {
         {/* Botões de ação */}
         <div className="flex justify-between items-center">
           <div className="flex gap-4">
-            <Button
-              onClick={salvarEdicaoCampanha}
-              disabled={editandoCampanha}
-              className="gap-2"
-            >
+            <Button onClick={salvarEdicaoCampanha} disabled={editandoCampanha} className="gap-2">
               <CheckCircle size={16} />
               {editandoCampanha ? 'Salvando...' : 'Salvar Alterações'}
             </Button>
@@ -1852,20 +1614,13 @@ export default function Campanhas() {
           </div>
           
           {/* Botão de exclusão - só aparece para admins */}
-          <Button
-            variant="destructive"
-            onClick={() => excluirCampanha(campanhaEditando.id)}
-            disabled={editandoCampanha}
-            className="gap-2"
-          >
+          <Button variant="destructive" onClick={() => excluirCampanha(campanhaEditando.id)} disabled={editandoCampanha} className="gap-2">
             <X size={16} />
             Excluir Campanha
           </Button>
         </div>
-      </div>
-    );
+      </div>;
   };
-  
   const renderVendasFuncionarios = () => <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
