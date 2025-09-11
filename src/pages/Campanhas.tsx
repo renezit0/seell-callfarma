@@ -133,6 +133,14 @@ export default function Campanhas() {
   const [loadingLojas, setLoadingLojas] = useState(false);
   const [criandoCampanha, setCriandoCampanha] = useState(false);
   
+  // Estados para o formulário rápido de adição de lojas
+  const [formRapido, setFormRapido] = useState({
+    numeroLoja: '',
+    grupo: '1',
+    metaQuantidade: '',
+    metaValor: ''
+  });
+  
   // Estados para edição de campanhas
   const [campanhaEditando, setCampanhaEditando] = useState<any>(null);
   const [editandoCampanha, setEditandoCampanha] = useState(false);
@@ -298,6 +306,72 @@ export default function Campanhas() {
     ));
   };
 
+  const buscarLojaPorNumero = (numero: string) => {
+    return lojasDisponiveis.find(loja => loja.numero === numero);
+  };
+
+  const adicionarLojaRapido = () => {
+    if (!formRapido.numeroLoja) {
+      toast({
+        title: "Erro",
+        description: "Digite o número da loja",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const loja = buscarLojaPorNumero(formRapido.numeroLoja);
+    if (!loja) {
+      toast({
+        title: "Erro",
+        description: `Loja ${formRapido.numeroLoja} não encontrada`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (lojasParticipantes.find(l => l.loja_id === loja.id)) {
+      toast({
+        title: "Aviso",
+        description: "Esta loja já foi adicionada",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const novaLoja = {
+      loja_id: loja.id,
+      codigo_loja: parseInt(loja.numero),
+      meta_quantidade: parseInt(formRapido.metaQuantidade) || 0,
+      meta_valor: parseFloat(formRapido.metaValor) || 0,
+      grupo_id: formRapido.grupo
+    };
+
+    setLojasParticipantes(prev => [...prev, novaLoja]);
+    
+    // Limpar formulário
+    setFormRapido({
+      numeroLoja: '',
+      grupo: '1',
+      metaQuantidade: '',
+      metaValor: ''
+    });
+
+    toast({
+      title: "Sucesso",
+      description: `Loja ${loja.numero} - ${loja.nome} adicionada`,
+    });
+  };
+
+  const resetarFormRapido = () => {
+    setFormRapido({
+      numeroLoja: '',
+      grupo: '1',
+      metaQuantidade: '',
+      metaValor: ''
+    });
+  };
+
   const criarCampanha = async () => {
     if (!novaCampanha.nome || !novaCampanha.data_inicio || !novaCampanha.data_fim) {
       toast({
@@ -380,6 +454,7 @@ export default function Campanhas() {
         produtos: ''
       });
       setLojasParticipantes([]);
+      resetarFormRapido();
       setView('lista');
       buscarCampanhas();
     } catch (error) {
@@ -1111,18 +1186,122 @@ export default function Campanhas() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Formulário Rápido para Adicionar Lojas */}
+          <Card className="bg-muted/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Adição Rápida de Lojas</CardTitle>
+              <CardDescription>Digite apenas o número da loja para adicionar rapidamente</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="numeroLoja">Número da Loja *</Label>
+                  <Input
+                    id="numeroLoja"
+                    type="text"
+                    value={formRapido.numeroLoja}
+                    onChange={(e) => setFormRapido(prev => ({ ...prev, numeroLoja: e.target.value }))}
+                    placeholder="Ex: 22"
+                    className="text-center font-medium"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const loja = buscarLojaPorNumero(formRapido.numeroLoja);
+                        if (loja) {
+                          document.getElementById('grupoLoja')?.focus();
+                        }
+                      }
+                    }}
+                  />
+                  {formRapido.numeroLoja && buscarLojaPorNumero(formRapido.numeroLoja) && (
+                    <div className="text-sm text-primary font-medium">
+                      {buscarLojaPorNumero(formRapido.numeroLoja)?.numero} - {buscarLojaPorNumero(formRapido.numeroLoja)?.nome}
+                    </div>
+                  )}
+                  {formRapido.numeroLoja && !buscarLojaPorNumero(formRapido.numeroLoja) && (
+                    <div className="text-sm text-destructive">
+                      Loja não encontrada
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="grupoLoja">Grupo *</Label>
+                  <Select 
+                    value={formRapido.grupo} 
+                    onValueChange={(value) => setFormRapido(prev => ({ ...prev, grupo: value }))}
+                  >
+                    <SelectTrigger id="grupoLoja" className="bg-background">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border z-50">
+                      <SelectItem value="1">Grupo 1</SelectItem>
+                      <SelectItem value="2">Grupo 2</SelectItem>
+                      <SelectItem value="3">Grupo 3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="metaQtd">Meta Quantidade</Label>
+                  <Input
+                    id="metaQtd"
+                    type="number"
+                    value={formRapido.metaQuantidade}
+                    onChange={(e) => setFormRapido(prev => ({ ...prev, metaQuantidade: e.target.value }))}
+                    placeholder="0"
+                    min="0"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="metaValor">Meta Valor (R$)</Label>
+                  <Input
+                    id="metaValor"
+                    type="number"
+                    step="0.01"
+                    value={formRapido.metaValor}
+                    onChange={(e) => setFormRapido(prev => ({ ...prev, metaValor: e.target.value }))}
+                    placeholder="0.00"
+                    min="0"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={adicionarLojaRapido}
+                    disabled={!formRapido.numeroLoja || !buscarLojaPorNumero(formRapido.numeroLoja)}
+                    className="gap-2"
+                  >
+                    <Plus size={16} />
+                    Adicionar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={resetarFormRapido}
+                    size="sm"
+                  >
+                    Limpar
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Botão para adicionar lojas restantes (caso o usuário tenha removido alguma) */}
           {lojasDisponiveis.filter(loja => !lojasParticipantes.find(l => l.loja_id === loja.id)).length > 0 && (
             <div className="space-y-2">
-              <Label>Adicionar Loja</Label>
+              <Label>Ou escolha da lista completa</Label>
               <Select onValueChange={(lojaId) => {
                 const loja = lojasDisponiveis.find(l => l.id === parseInt(lojaId));
                 if (loja) adicionarLoja(loja);
               }}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Escolha uma loja para adicionar" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border z-50">
                   {lojasDisponiveis
                     .filter(loja => !lojasParticipantes.find(l => l.loja_id === loja.id))
                     .map(loja => (
