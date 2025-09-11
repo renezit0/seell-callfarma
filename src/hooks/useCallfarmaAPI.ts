@@ -893,11 +893,62 @@ export const useCallfarmaAPI = () => {
     }
   };
 
+  const buscarVendasCampanhaDetalhada = async (filtros: FiltroCampanha): Promise<any[]> => {
+    setLoading(true);
+    try {
+      const params: any = {
+        dataFim: filtros.dataFim,
+        dataIni: filtros.dataInicio,
+        groupBy: 'scefun.CDFUN,scefilial.CDFIL', // Agrupar por funcionário e loja
+        orderBy: 'TOTAL_VLR_VE desc'
+      };
+
+      // Adicionar filtros específicos da campanha
+      if (filtros.filtroFornecedores) {
+        params.filtroFornecedores = filtros.filtroFornecedores;
+      }
+      if (filtros.filtroMarcas) {
+        params.filtroMarcas = filtros.filtroMarcas;
+      }
+      if (filtros.filtroFamilias) {
+        params.filtroFamilias = filtros.filtroFamilias;
+      }
+      if (filtros.filtroGrupos) {
+        params.filtroGrupos = filtros.filtroGrupos;
+      }
+      if (filtros.filtroProduto) {
+        params.filtroProduto = filtros.filtroProduto;
+      }
+
+      const { data, error } = await supabase.functions.invoke('callfarma-vendas', {
+        body: {
+          endpoint: '/financeiro/vendas-por-funcionario',
+          params
+        }
+      });
+
+      if (error) throw error;
+      
+      return data?.msg || [];
+    } catch (error) {
+      console.error('Erro ao buscar vendas detalhadas da campanha:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao buscar vendas detalhadas da campanha da API externa",
+        variant: "destructive",
+      });
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     buscarVendasFuncionarios,
     buscarVendasPorCategoria,
     buscarVendasCampanha,
+    buscarVendasCampanhaDetalhada,
     buscarTodasVendasConsolidadas,
     buscarVendasHojePorCategoria,
     buscarVendasHojePorLoja,

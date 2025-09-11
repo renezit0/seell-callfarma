@@ -105,8 +105,6 @@ interface ColaboradorRanking {
   loja_nome: string;
   grupo_id: string;
   totalVendas: number;
-  meta: number;
-  percentualAtingimento: number;
   posicao: number;
 }
 
@@ -155,7 +153,7 @@ export default function Campanhas() {
     produtos: '' // Novo campo para produtos específicos
   });
   const { toast } = useToast();
-  const { buscarVendasCampanha } = useCallfarmaAPI();
+  const { buscarVendasCampanha, buscarVendasCampanhaDetalhada } = useCallfarmaAPI();
 
   useEffect(() => {
     if (view === 'lista') {
@@ -1216,6 +1214,34 @@ export default function Campanhas() {
 
         if (colaboradoresError) continue;
 
+      // Buscar vendas da API externa para a campanha usando o período completo
+      const filtros = {
+        dataInicio: campanha.data_inicio,
+        dataFim: campanha.data_fim,
+        filtroFornecedores: campanha.fornecedores?.toString(),
+        filtroMarcas: campanha.marcas?.toString(),
+        filtroFamilias: campanha.familias?.toString(),
+        filtroGrupos: campanha.grupos_produtos?.join(','),
+        filtroProduto: campanha.produtos?.toString()
+      };
+
+      const vendasApiExterna = await buscarVendasCampanha(filtros);
+
+      const colaboradoresComVendas: ColaboradorRanking[] = [];
+
+      for (const participante of participantes) {
+        const loja = lojas?.find(l => l.id === participante.loja_id);
+        if (!loja) continue;
+
+        // Buscar colaboradores da loja
+        const { data: colaboradores, error: colaboradoresError } = await supabase
+          .from('usuarios')
+          .select('*')
+          .eq('loja_id', loja.id)
+          .neq('tipo', 'admin');
+
+        if (colaboradoresError) continue;
+
         // Buscar vendas da API externa pelo código da loja
         const vendaApiExterna = vendasApiExterna.find(v => v.CDFIL === participante.codigo_loja);
         const totalVendasLoja = campanha.tipo_meta === 'quantidade' 
@@ -1226,16 +1252,8 @@ export default function Campanhas() {
         const totalColaboradores = colaboradores?.length || 1;
         const vendasPorColaborador = totalVendasLoja / totalColaboradores;
 
-        // Meta individual por colaborador (meta da loja dividida pelo número de colaboradores)
-        const metaLoja = campanha.tipo_meta === 'quantidade' 
-          ? participante.meta_quantidade || 0
-          : participante.meta_valor || 0;
-        const metaPorColaborador = metaLoja / totalColaboradores;
-
         for (const colaborador of colaboradores || []) {
           if (vendasPorColaborador > 0) {
-            const percentualAtingimento = metaPorColaborador > 0 ? (vendasPorColaborador / metaPorColaborador) * 100 : 0;
-            
             colaboradoresComVendas.push({
               id: colaborador.id,
               nome: colaborador.nome,
@@ -1243,12 +1261,11 @@ export default function Campanhas() {
               loja_nome: loja.nome,
               grupo_id: participante.grupo_id || '1',
               totalVendas: vendasPorColaborador,
-              meta: metaPorColaborador,
-              percentualAtingimento,
               posicao: 0
             });
           }
         }
+      }
       }
 
       // Agrupar colaboradores por grupo de loja
@@ -1262,8 +1279,8 @@ export default function Campanhas() {
 
       const grupos: GrupoRanking[] = [];
       gruposMap.forEach((colaboradoresGrupo, grupoId) => {
-        // Ordenar colaboradores do grupo por percentual de atingimento
-        colaboradoresGrupo.sort((a, b) => b.percentualAtingimento - a.percentualAtingimento);
+        // Ordenar colaboradores do grupo por vendas
+        colaboradoresGrupo.sort((a, b) => b.totalVendas - a.totalVendas);
         
         // Adicionar posições dentro do grupo
         const colaboradoresComPosicoes = colaboradoresGrupo.map((colaborador, index) => ({
@@ -1272,8 +1289,6 @@ export default function Campanhas() {
         }));
 
         const totalVendasGrupo = colaboradoresGrupo.reduce((sum, col) => sum + col.totalVendas, 0);
-        const totalMetaGrupo = colaboradoresGrupo.reduce((sum, col) => sum + col.meta, 0);
-        const percentualAtingimentoGrupo = totalMetaGrupo > 0 ? (totalVendasGrupo / totalMetaGrupo) * 100 : 0;
 
         grupos.push({
           grupo_id: grupoId,
@@ -1281,15 +1296,15 @@ export default function Campanhas() {
           lojas: [],
           colaboradores: colaboradoresComPosicoes,
           totalVendas: totalVendasGrupo,
-          totalMeta: totalMetaGrupo,
-          percentualAtingimentoGrupo,
+          totalMeta: 0, // Colaboradores não têm meta
+          percentualAtingimentoGrupo: 0, // Não aplicável para colaboradores
           totalLojas: 0,
           totalColaboradores: colaboradoresGrupo.length
         });
       });
 
-      // Ordenar grupos por percentual de atingimento
-      grupos.sort((a, b) => b.percentualAtingimentoGrupo - a.percentualAtingimentoGrupo);
+      // Ordenar grupos por total de vendas
+      grupos.sort((a, b) => b.totalVendas - a.totalVendas);
 
       setGruposRanking(grupos);
     } catch (error) {
@@ -1524,13 +1539,10 @@ export default function Campanhas() {
                           </CardTitle>
                           <div className="text-right">
                             <div className="text-2xl font-bold text-primary">
-                              {grupo.percentualAtingimentoGrupo.toFixed(1)}%
+                              {formatarValorCampanha(grupo.totalVendas, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')}
                             </div>
                             <div className="text-sm text-muted-foreground">
                               {grupo.totalColaboradores} colaboradores
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {formatarValorCampanha(grupo.totalVendas, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')} de {formatarValorCampanha(grupo.totalMeta, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')}
                             </div>
                           </div>
                         </div>
@@ -1550,10 +1562,7 @@ export default function Campanhas() {
                                   </div>
                                   <div className="text-right">
                                     <p className="text-xl font-bold text-primary">
-                                      {colaborador.percentualAtingimento.toFixed(1)}%
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {formatarValorCampanha(colaborador.totalVendas, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')} de {formatarValorCampanha(colaborador.meta, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')}
+                                      {formatarValorCampanha(colaborador.totalVendas, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')}
                                     </p>
                                   </div>
                                 </div>
