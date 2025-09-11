@@ -493,20 +493,28 @@ export default function Campanhas() {
       if (erroCampanha) throw erroCampanha;
 
       // Buscar participantes da campanha
-      const {
-        data: participantes,
-        error: erroParticipantes
-      } = await supabase.from('campanhas_vendas_lojas_participantes').select('*').eq('campanha_id', campanha.id);
+      const { data: participantes, error: erroParticipantes } = await supabase
+        .from('campanhas_vendas_lojas_participantes')
+        .select('*')
+        .eq('campanha_id', campanha.id);
       if (erroParticipantes) throw erroParticipantes;
 
-      // Mapear participantes para o formato esperado
-      const lojasParticipantesFormatadas = participantes?.map(p => ({
+      // Buscar grupos das lojas para preencher corretamente quando o participante não tiver grupo_id
+      const lojasIds = (participantes || []).map(p => p.loja_id).filter(Boolean) as number[];
+      const { data: lojasGrupos } = await supabase
+        .from('lojas')
+        .select('id, grupo_id')
+        .in('id', lojasIds);
+      const lojasMap = new Map<number, { grupo_id?: number }>((lojasGrupos || []).map(l => [l.id as number, { grupo_id: (l as any).grupo_id }]));
+
+      // Mapear participantes para o formato esperado (grupo_id vindo do participante ou da loja)
+      const lojasParticipantesFormatadas = (participantes || []).map(p => ({
         loja_id: p.loja_id,
         codigo_loja: p.codigo_loja,
         meta_quantidade: p.meta_quantidade || 0,
         meta_valor: p.meta_valor || 0,
-        grupo_id: p.grupo_id || '1'
-      })) || [];
+        grupo_id: (p.grupo_id ? String(p.grupo_id) : String(lojasMap.get(p.loja_id as number)?.grupo_id ?? 1))
+      }));
 
       // Definir campanha para edição
       setCampanhaEditando({
