@@ -20,7 +20,7 @@ interface LojaRanking {
   id: number;
   numero: string;
   nome: string;
-  grupo_id: number;
+  grupo_id: string;
   totalVendas: number;
   totalColaboradores: number;
   mediaVendasPorColaborador: number;
@@ -40,7 +40,7 @@ export default function Status() {
   const periodoAtual = usePeriodoAtual();
   const { toast } = useToast();
   
-  const [grupoSelecionado, setGrupoSelecionado] = useState<number>(1);
+  const [grupoSelecionado, setGrupoSelecionado] = useState<string>('1');  
   const [loading, setLoading] = useState(false);
   const [lojasRanking, setLojasRanking] = useState<LojaRanking[]>([]);
   const [colaboradoresRanking, setColaboradoresRanking] = useState<ColaboradorRanking[]>([]);
@@ -71,11 +71,33 @@ export default function Status() {
 
   const carregarRankingLojas = async () => {
     try {
-      // Buscar lojas do grupo
+      // Buscar lojas participantes de campanhas ativas do grupo selecionado
+      const { data: participantes, error: participantesError } = await supabase
+        .from('campanhas_vendas_lojas_participantes')
+        .select(`
+          loja_id,
+          codigo_loja,
+          grupo_id,
+          campanhas_vendas_lojas!inner(
+            status
+          )
+        `)
+        .eq('grupo_id', grupoSelecionado)
+        .eq('campanhas_vendas_lojas.status', 'ativa');
+
+      if (participantesError) throw participantesError;
+
+      if (!participantes || participantes.length === 0) {
+        setLojasRanking([]);
+        return;
+      }
+
+      // Buscar dados das lojas
+      const lojasIds = participantes.map(p => p.loja_id);
       const { data: lojas, error: lojasError } = await supabase
         .from('lojas')
         .select('*')
-        .eq('grupo_id', grupoSelecionado);
+        .in('id', lojasIds);
 
       if (lojasError) throw lojasError;
 
@@ -90,7 +112,8 @@ export default function Status() {
           )
         `)
         .gte('data_venda', periodoAtual.dataInicio.toISOString().split('T')[0])
-        .lte('data_venda', periodoAtual.dataFim.toISOString().split('T')[0]);
+        .lte('data_venda', periodoAtual.dataFim.toISOString().split('T')[0])
+        .in('usuarios.loja_id', lojasIds);
 
       if (vendasError) throw vendasError;
 
@@ -116,7 +139,7 @@ export default function Status() {
           id: loja.id,
           numero: loja.numero,
           nome: loja.nome,
-          grupo_id: loja.grupo_id,
+          grupo_id: grupoSelecionado,
           totalVendas,
           totalColaboradores: totalColaboradores || 0,
           mediaVendasPorColaborador,
@@ -141,11 +164,33 @@ export default function Status() {
 
   const carregarRankingColaboradores = async () => {
     try {
-      // Buscar lojas do grupo
+      // Buscar lojas participantes de campanhas ativas do grupo selecionado
+      const { data: participantes, error: participantesError } = await supabase
+        .from('campanhas_vendas_lojas_participantes')
+        .select(`
+          loja_id,
+          codigo_loja,
+          grupo_id,
+          campanhas_vendas_lojas!inner(
+            status
+          )
+        `)
+        .eq('grupo_id', grupoSelecionado)
+        .eq('campanhas_vendas_lojas.status', 'ativa');
+
+      if (participantesError) throw participantesError;
+
+      if (!participantes || participantes.length === 0) {
+        setColaboradoresRanking([]);
+        return;
+      }
+
+      // Buscar dados das lojas
+      const lojasIds = participantes.map(p => p.loja_id);
       const { data: lojas, error: lojasError } = await supabase
         .from('lojas')
         .select('*')
-        .eq('grupo_id', grupoSelecionado);
+        .in('id', lojasIds);
 
       if (lojasError) throw lojasError;
 
@@ -246,8 +291,8 @@ export default function Status() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Grupo</label>
                 <Select 
-                  value={grupoSelecionado.toString()} 
-                  onValueChange={(value) => setGrupoSelecionado(parseInt(value))}
+                  value={grupoSelecionado} 
+                  onValueChange={(value) => setGrupoSelecionado(value)}
                 >
                   <SelectTrigger>
                     <SelectValue />
