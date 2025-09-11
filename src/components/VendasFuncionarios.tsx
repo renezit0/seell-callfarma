@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
@@ -21,46 +20,21 @@ import { useToast } from '@/hooks/use-toast';
 
 export const VendasFuncionarios = () => {
   const [vendas, setVendas] = useState<VendaFuncionario[]>([]);
+  const [resultadosProdutos, setResultadosProdutos] = useState<any[]>([]);
   const [filtros, setFiltros] = useState<FiltrosVendas>({
     dataInicio: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 dias atrás
     dataFim: new Date().toISOString().split('T')[0], // hoje
     filtroFornecedores: '1998',
     filtroGrupos: '21,20,25'
   });
-  
-  // Estados para pesquisa por produtos
-  const [codigosProdutos, setCodigosProdutos] = useState('23319, 52682, 58033, 60423, 60424, 60425, 60426, 60427, 60428, 61855, 61856, 62335, 64489, 75790, 75791, 77826');
-  const [resultadosProdutos, setResultadosProdutos] = useState<any[]>([]);
-  const [loadingProdutos, setLoadingProdutos] = useState(false);
-  const [filtroDataProdutos, setFiltroDataProdutos] = useState({
-    dataInicio: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    dataFim: new Date().toISOString().split('T')[0]
-  });
+  const [codigosProdutos, setCodigosProdutos] = useState('');
   
   const { loading, buscarVendasFuncionarios, buscarVendasPorProduto } = useCallfarmaAPI();
   const { toast } = useToast();
 
   const handleBuscar = async () => {
-    const resultados = await buscarVendasFuncionarios(filtros);
-    setVendas(resultados);
-    
-    if (resultados.length > 0) {
-      toast({
-        title: "Sucesso",
-        description: `${resultados.length} registros encontrados`,
-      });
-    } else {
-      toast({
-        title: "Sem resultados",
-        description: "Nenhuma venda encontrada para os filtros selecionados. Verifique os parâmetros e tente novamente.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const buscarProdutos = async () => {
-    setLoadingProdutos(true);
-    try {
+    // Se há códigos de produtos, usar busca por produtos
+    if (codigosProdutos.trim()) {
       const codigosLimpos = codigosProdutos
         .split(',')
         .map(c => c.trim())
@@ -70,26 +44,36 @@ export const VendasFuncionarios = () => {
       console.log('🔍 Buscando vendas para os produtos:', codigosLimpos);
 
       const resultados = await buscarVendasPorProduto({
-        dataInicio: filtroDataProdutos.dataInicio,
-        dataFim: filtroDataProdutos.dataFim,
+        dataInicio: filtros.dataInicio,
+        dataFim: filtros.dataFim,
         codigosProdutos: codigosLimpos
       });
 
       setResultadosProdutos(resultados);
-      
+      setVendas([]); // Limpar vendas por funcionário
+
       toast({
         title: "Sucesso",
-        description: `Encontrados ${resultados.length} registros de vendas`,
+        description: `Encontrados ${resultados.length} registros de vendas por produto`,
       });
-    } catch (error) {
-      console.error('Erro ao buscar produtos:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao buscar dados dos produtos",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingProdutos(false);
+    } else {
+      // Busca normal por funcionários
+      const resultados = await buscarVendasFuncionarios(filtros);
+      setVendas(resultados);
+      setResultadosProdutos([]); // Limpar resultados por produto
+      
+      if (resultados.length > 0) {
+        toast({
+          title: "Sucesso",
+          description: `${resultados.length} registros encontrados`,
+        });
+      } else {
+        toast({
+          title: "Sem resultados",
+          description: "Nenhuma venda encontrada para os filtros selecionados. Verifique os parâmetros e tente novamente.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -108,351 +92,306 @@ export const VendasFuncionarios = () => {
   const totalVendas = vendasArray.reduce((sum, venda) => sum + venda.TOTAL_VALOR, 0);
   const totalQuantidade = vendasArray.reduce((sum, venda) => sum + venda.TOTAL_QUANTIDADE, 0);
 
+  // Determinar qual tipo de resultado mostrar
+  const mostrarVendasFuncionarios = vendasArray.length > 0;
+  const mostrarVendasProdutos = resultadosProdutos.length > 0;
+
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="funcionarios" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="funcionarios" className="gap-2">
-            <Users className="h-4 w-4" />
-            Vendas por Funcionário
-          </TabsTrigger>
-          <TabsTrigger value="produtos" className="gap-2">
-            <Package className="h-4 w-4" />
-            Vendas por Produtos
-          </TabsTrigger>
-        </TabsList>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Vendas por Funcionário - API Externa
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <Label htmlFor="dataInicio">Data Início</Label>
+              <Input
+                id="dataInicio"
+                type="date"
+                value={filtros.dataInicio}
+                onChange={(e) => setFiltros(prev => ({ ...prev, dataInicio: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="dataFim">Data Fim</Label>
+              <Input
+                id="dataFim"
+                type="date"
+                value={filtros.dataFim}
+                onChange={(e) => setFiltros(prev => ({ ...prev, dataFim: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="fornecedores">Fornecedores</Label>
+              <Input
+                id="fornecedores"
+                placeholder="Ex: 1998"
+                value={filtros.filtroFornecedores}
+                onChange={(e) => setFiltros(prev => ({ ...prev, filtroFornecedores: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="grupos">Grupos</Label>
+              <Input
+                id="grupos"
+                placeholder="Ex: 21,20,25"
+                value={filtros.filtroGrupos}
+                onChange={(e) => setFiltros(prev => ({ ...prev, filtroGrupos: e.target.value }))}
+              />
+            </div>
+          </div>
 
-        <TabsContent value="funcionarios" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Vendas por Funcionário - API Externa
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <Label htmlFor="dataInicio">Data Início</Label>
-                  <Input
-                    id="dataInicio"
-                    type="date"
-                    value={filtros.dataInicio}
-                    onChange={(e) => setFiltros(prev => ({ ...prev, dataInicio: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="dataFim">Data Fim</Label>
-                  <Input
-                    id="dataFim"
-                    type="date"
-                    value={filtros.dataFim}
-                    onChange={(e) => setFiltros(prev => ({ ...prev, dataFim: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="fornecedores">Fornecedores</Label>
-                  <Input
-                    id="fornecedores"
-                    placeholder="Ex: 1998"
-                    value={filtros.filtroFornecedores}
-                    onChange={(e) => setFiltros(prev => ({ ...prev, filtroFornecedores: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="grupos">Grupos</Label>
-                  <Input
-                    id="grupos"
-                    placeholder="Ex: 21,20,25"
-                    value={filtros.filtroGrupos}
-                    onChange={(e) => setFiltros(prev => ({ ...prev, filtroGrupos: e.target.value }))}
-                  />
-                </div>
-              </div>
-              
-              <Button onClick={handleBuscar} disabled={loading} className="gap-2">
-                <Search className="h-4 w-4" />
-                {loading ? 'Buscando...' : 'Buscar Vendas'}
-              </Button>
-            </CardContent>
-          </Card>
+          <div>
+            <Label htmlFor="produtos" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Produtos Específicos (opcional)
+            </Label>
+            <Textarea
+              id="produtos"
+              placeholder="Ex: 23319, 52682, 58033, 60423... (deixe vazio para buscar por funcionário)"
+              value={codigosProdutos}
+              onChange={(e) => setCodigosProdutos(e.target.value)}
+              rows={2}
+            />
+            <p className="text-sm text-muted-foreground mt-1">
+              {codigosProdutos.trim() 
+                ? 'Buscará vendas destes produtos específicos' 
+                : 'Buscará vendas por funcionário usando filtros acima'
+              }
+            </p>
+          </div>
+          
+          <Button onClick={handleBuscar} disabled={loading} className="gap-2">
+            <Search className="h-4 w-4" />
+            {loading ? 'Buscando...' : codigosProdutos.trim() ? 'Buscar Produtos' : 'Buscar Vendas'}
+          </Button>
+        </CardContent>
+      </Card>
 
-          {vendasArray.length > 0 && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-5 w-5 text-blue-500" />
-                      <div>
-                        <p className="text-2xl font-bold">{vendasArray.length}</p>
-                        <p className="text-sm text-muted-foreground">Funcionários</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-green-500" />
-                      <div>
-                        <p className="text-2xl font-bold">{formatarValor(totalVendas)}</p>
-                        <p className="text-sm text-muted-foreground">Total Vendas</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-2">
-                      <Store className="h-5 w-5 text-purple-500" />
-                      <div>
-                        <p className="text-2xl font-bold">{formatarQuantidade(totalQuantidade)}</p>
-                        <p className="text-sm text-muted-foreground">Total Quantidade</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle>Resultados ({vendasArray.length} funcionários)</CardTitle>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Download className="h-4 w-4" />
-                      Exportar
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="border-b">
-                        <tr>
-                          <th className="text-left p-2">Funcionário</th>
-                          <th className="text-left p-2">Loja</th>
-                          <th className="text-right p-2">Valor Total</th>
-                          <th className="text-right p-2">Quantidade</th>
-                          <th className="text-right p-2">Ticket Médio</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {vendasArray.map((venda, index) => (
-                          <tr key={`${venda.CDFUN}-${venda.CDFIL}`} className="border-b hover:bg-muted/50">
-                            <td className="p-2">
-                              <div>
-                                <p className="font-medium">{venda.NOME}</p>
-                                <Badge variant="secondary" className="text-xs">
-                                  ID: {venda.CDFUN}
-                                </Badge>
-                              </div>
-                            </td>
-                            <td className="p-2">
-                              <div>
-                                <p className="font-medium">{venda.NOMEFIL}</p>
-                                <Badge variant="outline" className="text-xs">
-                                  Código: {venda.CDFIL}
-                                </Badge>
-                              </div>
-                            </td>
-                            <td className="text-right p-2 font-medium">
-                              {formatarValor(venda.TOTAL_VALOR)}
-                            </td>
-                            <td className="text-right p-2">
-                              {formatarQuantidade(venda.TOTAL_QUANTIDADE)}
-                            </td>
-                            <td className="text-right p-2">
-                              {venda.TOTAL_QUANTIDADE > 0 
-                                ? formatarValor(venda.TOTAL_VALOR / venda.TOTAL_QUANTIDADE)
-                                : '-'
-                              }
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="produtos" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Pesquisar Vendas por Produtos
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="dataInicioProdutos">Data Início</Label>
-                  <Input
-                    id="dataInicioProdutos"
-                    type="date"
-                    value={filtroDataProdutos.dataInicio}
-                    onChange={(e) => setFiltroDataProdutos(prev => ({ ...prev, dataInicio: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="dataFimProdutos">Data Fim</Label>
-                  <Input
-                    id="dataFimProdutos"
-                    type="date"
-                    value={filtroDataProdutos.dataFim}
-                    onChange={(e) => setFiltroDataProdutos(prev => ({ ...prev, dataFim: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="codigosProdutos">Códigos dos Produtos (separados por vírgula)</Label>
-                <Textarea
-                  id="codigosProdutos"
-                  placeholder="Ex: 23319, 52682, 58033, 60423..."
-                  value={codigosProdutos}
-                  onChange={(e) => setCodigosProdutos(e.target.value)}
-                  rows={3}
-                />
-              </div>
-              <Button onClick={buscarProdutos} disabled={loadingProdutos} className="gap-2">
-                <Search className="h-4 w-4" />
-                {loadingProdutos ? 'Buscando...' : 'Buscar Produtos'}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Resultados da Pesquisa por Produtos */}
-          {resultadosProdutos.length > 0 && (
+      {/* Resultados para Vendas por Funcionário */}
+      {mostrarVendasFuncionarios && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Resultados da Pesquisa ({resultadosProdutos.length} registros)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border">
-                    <thead>
-                      <tr className="bg-muted">
-                        <th className="border p-2 text-left">Loja</th>
-                        <th className="border p-2 text-left">Funcionário</th>
-                        <th className="border p-2 text-left">Produto</th>
-                        <th className="border p-2 text-left">Data</th>
-                        <th className="border p-2 text-right">Qtd</th>
-                        <th className="border p-2 text-right">Valor</th>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{vendasArray.length}</p>
+                    <p className="text-sm text-muted-foreground">Funcionários</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-green-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{formatarValor(totalVendas)}</p>
+                    <p className="text-sm text-muted-foreground">Total Vendas</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2">
+                  <Store className="h-5 w-5 text-purple-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{formatarQuantidade(totalQuantidade)}</p>
+                    <p className="text-sm text-muted-foreground">Total Quantidade</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Resultados ({vendasArray.length} funcionários)</CardTitle>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Download className="h-4 w-4" />
+                  Exportar
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b">
+                    <tr>
+                      <th className="text-left p-2">Funcionário</th>
+                      <th className="text-left p-2">Loja</th>
+                      <th className="text-right p-2">Valor Total</th>
+                      <th className="text-right p-2">Quantidade</th>
+                      <th className="text-right p-2">Ticket Médio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vendasArray.map((venda, index) => (
+                      <tr key={`${venda.CDFUN}-${venda.CDFIL}`} className="border-b hover:bg-muted/50">
+                        <td className="p-2">
+                          <div>
+                            <p className="font-medium">{venda.NOME}</p>
+                            <Badge variant="secondary" className="text-xs">
+                              ID: {venda.CDFUN}
+                            </Badge>
+                          </div>
+                        </td>
+                        <td className="p-2">
+                          <div>
+                            <p className="font-medium">{venda.NOMEFIL}</p>
+                            <Badge variant="outline" className="text-xs">
+                              Código: {venda.CDFIL}
+                            </Badge>
+                          </div>
+                        </td>
+                        <td className="text-right p-2 font-medium">
+                          {formatarValor(venda.TOTAL_VALOR)}
+                        </td>
+                        <td className="text-right p-2">
+                          {formatarQuantidade(venda.TOTAL_QUANTIDADE)}
+                        </td>
+                        <td className="text-right p-2">
+                          {venda.TOTAL_QUANTIDADE > 0 
+                            ? formatarValor(venda.TOTAL_VALOR / venda.TOTAL_QUANTIDADE)
+                            : '-'
+                          }
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {resultadosProdutos.slice(0, 50).map((item, index) => (
-                        <tr key={index} className="hover:bg-muted/50">
-                          <td className="border p-2">
-                            <div>
-                              <div className="font-medium">{item.NOMEFIL}</div>
-                              <div className="text-sm text-muted-foreground">CDFIL: {item.CDFIL}</div>
-                            </div>
-                          </td>
-                          <td className="border p-2">
-                            <div>
-                              <div className="font-medium">{item.NOMEFUN}</div>
-                              <div className="text-sm text-muted-foreground">CPF: {item.CPFFUN}</div>
-                            </div>
-                          </td>
-                          <td className="border p-2">
-                            <div>
-                              <div className="font-medium">{item.NOMEPRODU}</div>
-                              <div className="text-sm text-muted-foreground">
-                                Código: {item.CDPRODU} | Grupo: {item.NOMEGRUPO}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                Marca: {item.NOMEMARCA}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="border p-2">
-                            {new Date(item.DATA).toLocaleDateString('pt-BR')}
-                          </td>
-                          <td className="border p-2 text-right">
-                            <div>{item.TOTAL_QTD_VE} un</div>
-                            {item.TOTAL_QTD_DV > 0 && (
-                              <div className="text-sm text-red-500">Devol: {item.TOTAL_QTD_DV}</div>
-                            )}
-                          </td>
-                          <td className="border p-2 text-right">
-                            <div className="font-medium">
-                              {new Intl.NumberFormat('pt-BR', { 
-                                style: 'currency', 
-                                currency: 'BRL' 
-                              }).format(item.TOTAL_VLR_VE)}
-                            </div>
-                            {item.TOTAL_VLR_DV > 0 && (
-                              <div className="text-sm text-red-500">
-                                Devol: {new Intl.NumberFormat('pt-BR', { 
-                                  style: 'currency', 
-                                  currency: 'BRL' 
-                                }).format(item.TOTAL_VLR_DV)}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {/* Resultados para Vendas por Produtos */}
+      {mostrarVendasProdutos && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Vendas por Produtos ({resultadosProdutos.length} registros)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border">
+                <thead>
+                  <tr className="bg-muted">
+                    <th className="border p-2 text-left">Loja</th>
+                    <th className="border p-2 text-left">Funcionário</th>
+                    <th className="border p-2 text-left">Produto</th>
+                    <th className="border p-2 text-left">Data</th>
+                    <th className="border p-2 text-right">Qtd</th>
+                    <th className="border p-2 text-right">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resultadosProdutos.slice(0, 50).map((item, index) => (
+                    <tr key={index} className="hover:bg-muted/50">
+                      <td className="border p-2">
+                        <div>
+                          <div className="font-medium">{item.NOMEFIL}</div>
+                          <div className="text-sm text-muted-foreground">CDFIL: {item.CDFIL}</div>
+                        </div>
+                      </td>
+                      <td className="border p-2">
+                        <div>
+                          <div className="font-medium">{item.NOMEFUN}</div>
+                          <div className="text-sm text-muted-foreground">CPF: {item.CPFFUN}</div>
+                        </div>
+                      </td>
+                      <td className="border p-2">
+                        <div>
+                          <div className="font-medium">{item.NOMEPRODU}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Código: {item.CDPRODU} | Grupo: {item.NOMEGRUPO}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Marca: {item.NOMEMARCA}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="border p-2">
+                        {new Date(item.DATA).toLocaleDateString('pt-BR')}
+                      </td>
+                      <td className="border p-2 text-right">
+                        <div>{item.TOTAL_QTD_VE} un</div>
+                        {item.TOTAL_QTD_DV > 0 && (
+                          <div className="text-sm text-red-500">Devol: {item.TOTAL_QTD_DV}</div>
+                        )}
+                      </td>
+                      <td className="border p-2 text-right">
+                        <div className="font-medium">
+                          {new Intl.NumberFormat('pt-BR', { 
+                            style: 'currency', 
+                            currency: 'BRL' 
+                          }).format(item.TOTAL_VLR_VE)}
+                        </div>
+                        {item.TOTAL_VLR_DV > 0 && (
+                          <div className="text-sm text-red-500">
+                            Devol: {new Intl.NumberFormat('pt-BR', { 
+                              style: 'currency', 
+                              currency: 'BRL' 
+                            }).format(item.TOTAL_VLR_DV)}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {resultadosProdutos.length > 50 && (
+              <Alert className="mt-4">
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Mostrando apenas os primeiros 50 registros de {resultadosProdutos.length} encontrados.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Resumo para Produtos */}
+            <div className="mt-4 p-4 bg-muted rounded-lg">
+              <h4 className="font-semibold mb-2">Resumo</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <div className="text-muted-foreground">Total de Registros</div>
+                  <div className="font-medium">{resultadosProdutos.length}</div>
                 </div>
-
-                {resultadosProdutos.length > 50 && (
-                  <Alert className="mt-4">
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      Mostrando apenas os primeiros 50 registros de {resultadosProdutos.length} encontrados.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {/* Resumo */}
-                <div className="mt-4 p-4 bg-muted rounded-lg">
-                  <h4 className="font-semibold mb-2">Resumo</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <div className="text-muted-foreground">Total de Registros</div>
-                      <div className="font-medium">{resultadosProdutos.length}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">Quantidade Total</div>
-                      <div className="font-medium">
-                        {resultadosProdutos.reduce((sum, item) => sum + (item.TOTAL_QTD_VE || 0), 0)} un
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">Valor Total</div>
-                      <div className="font-medium">
-                        {new Intl.NumberFormat('pt-BR', { 
-                          style: 'currency', 
-                          currency: 'BRL' 
-                        }).format(resultadosProdutos.reduce((sum, item) => sum + (item.TOTAL_VLR_VE || 0), 0))}
-                      </div>
-                    </div>
+                <div>
+                  <div className="text-muted-foreground">Quantidade Total</div>
+                  <div className="font-medium">
+                    {resultadosProdutos.reduce((sum, item) => sum + (item.TOTAL_QTD_VE || 0), 0)} un
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {resultadosProdutos.length === 0 && !loadingProdutos && (
-            <Card>
-              <CardContent className="text-center py-12">
-                <Info className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  Use os filtros acima para pesquisar vendas por produtos específicos.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+                <div>
+                  <div className="text-muted-foreground">Valor Total</div>
+                  <div className="font-medium">
+                    {new Intl.NumberFormat('pt-BR', { 
+                      style: 'currency', 
+                      currency: 'BRL' 
+                    }).format(resultadosProdutos.reduce((sum, item) => sum + (item.TOTAL_VLR_VE || 0), 0))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
