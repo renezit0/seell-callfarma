@@ -1090,7 +1090,7 @@ export default function Campanhas() {
                             {loja.percentual_meta.toFixed(1)}%
                           </div>
                           <div className="text-[10px] text-muted-foreground leading-tight">
-                            ({Math.round(valorRealizado)}/{Math.round(valorMeta)}{campanhaSelecionada.tipo_meta === 'quantidade' ? 'un' : ''})
+                            ({formatarValor(valorRealizado, campanhaSelecionada.tipo_meta)}/{formatarValor(valorMeta, campanhaSelecionada.tipo_meta)})
                           </div>
                         </div>
                       </div>;
