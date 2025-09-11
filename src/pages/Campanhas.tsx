@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ChartLine, Plus, Eye, Edit, Trophy, Store, Calendar, Target, Users, TrendingUp, ArrowLeft, Info, CheckCircle, Clock, Award, Medal, Crown } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ChartLine, Plus, Eye, Edit, Trophy, Store, Calendar, Target, Users, TrendingUp, ArrowLeft, Info, CheckCircle, Clock, Award, Medal, Crown, AlertCircle, X } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { VendasFuncionarios } from '@/components/VendasFuncionarios';
 import { supabase } from '@/integrations/supabase/client';
@@ -97,7 +97,7 @@ interface GrupoRanking {
 }
 export default function Campanhas() {
   const periodoAtual = usePeriodoAtual();
-  const [view, setView] = useState<'lista' | 'detalhes' | 'criar' | 'vendas-funcionarios' | 'status'>('lista');
+  const [view, setView] = useState<'lista' | 'detalhes' | 'criar' | 'vendas-funcionarios' | 'status' | 'editar'>('lista');
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const [campanhaSelecionada, setCampanhaSelecionada] = useState<CampanhaDetalhada | null>(null);
   const [incluirInativas, setIncluirInativas] = useState(false);
@@ -132,6 +132,10 @@ export default function Campanhas() {
   const [lojasParticipantes, setLojasParticipantes] = useState<{loja_id: number, codigo_loja: number, meta_quantidade: number, meta_valor: number, grupo_id: string}[]>([]);
   const [loadingLojas, setLoadingLojas] = useState(false);
   const [criandoCampanha, setCriandoCampanha] = useState(false);
+  
+  // Estados para edição de campanhas
+  const [campanhaEditando, setCampanhaEditando] = useState<any>(null);
+  const [editandoCampanha, setEditandoCampanha] = useState(false);
   const {
     toast
   } = useToast();
@@ -387,6 +391,159 @@ export default function Campanhas() {
       });
     } finally {
       setCriandoCampanha(false);
+    }
+  };
+  
+  const iniciarEdicaoCampanha = async (campanha: any) => {
+    try {
+      // Buscar dados completos da campanha
+      const { data: campanhaCompleta, error: erroCampanha } = await supabase
+        .from('campanhas_vendas_lojas')
+        .select('*')
+        .eq('id', campanha.id)
+        .single();
+        
+      if (erroCampanha) throw erroCampanha;
+      
+      // Buscar participantes da campanha
+      const { data: participantes, error: erroParticipantes } = await supabase
+        .from('campanhas_vendas_lojas_participantes')
+        .select('*')
+        .eq('campanha_id', campanha.id);
+        
+      if (erroParticipantes) throw erroParticipantes;
+      
+      // Mapear participantes para o formato esperado
+      const lojasParticipantesFormatadas = participantes?.map(p => ({
+        loja_id: p.loja_id,
+        codigo_loja: p.codigo_loja,
+        meta_quantidade: p.meta_quantidade || 0,
+        meta_valor: p.meta_valor || 0,
+        grupo_id: p.grupo_id || '1'
+      })) || [];
+      
+      // Definir campanha para edição
+      setCampanhaEditando({
+        id: campanhaCompleta.id,
+        nome: campanhaCompleta.nome || '',
+        descricao: campanhaCompleta.descricao || '',
+        data_inicio: campanhaCompleta.data_inicio || '',
+        data_fim: campanhaCompleta.data_fim || '',
+        tipo_meta: campanhaCompleta.tipo_meta || 'quantidade',
+        grupo_campanha: '1', // usar grupo padrão por agora
+        fornecedores: campanhaCompleta.fornecedores?.toString() || '',
+        marcas: campanhaCompleta.marcas?.toString() || '',
+        familias: campanhaCompleta.familias?.toString() || '',
+        grupos_produtos: campanhaCompleta.grupos_produtos?.toString() || '',
+        produtos: campanhaCompleta.produtos || ''
+      });
+      
+      setLojasParticipantes(lojasParticipantesFormatadas);
+      await carregarLojasDisponiveis();
+      setView('editar');
+      
+    } catch (error) {
+      console.error('Erro ao carregar campanha para edição:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar dados da campanha",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const salvarEdicaoCampanha = async () => {
+    if (!campanhaEditando) return;
+    
+    // Validar campos obrigatórios
+    if (!campanhaEditando.nome || !campanhaEditando.data_inicio || !campanhaEditando.data_fim) {
+      toast({
+        title: "Erro",
+        description: "Preencha os campos obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (lojasParticipantes.length === 0) {
+      toast({
+        title: "Erro", 
+        description: "Adicione pelo menos uma loja participante",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setEditandoCampanha(true);
+    try {
+      // Atualizar campanha
+      const { error: erroCampanha } = await supabase
+        .from('campanhas_vendas_lojas')
+        .update({
+          nome: campanhaEditando.nome,
+          descricao: campanhaEditando.descricao,
+          data_inicio: campanhaEditando.data_inicio,
+          data_fim: campanhaEditando.data_fim,
+          tipo_meta: campanhaEditando.tipo_meta,
+          fornecedores: campanhaEditando.fornecedores || null,
+          marcas: campanhaEditando.marcas || null,
+          familias: campanhaEditando.familias || null,
+          grupos_produtos: campanhaEditando.grupos_produtos || null,
+          produtos: campanhaEditando.produtos || null
+        })
+        .eq('id', campanhaEditando.id);
+
+      if (erroCampanha) throw erroCampanha;
+
+      // Remover participantes existentes
+      const { error: erroRemocao } = await supabase
+        .from('campanhas_vendas_lojas_participantes')
+        .delete()
+        .eq('campanha_id', campanhaEditando.id);
+
+      if (erroRemocao) throw erroRemocao;
+
+      // Adicionar novos participantes
+      const baseId = Date.now();
+      const participantesData = lojasParticipantes.map((loja, idx) => ({
+        id: baseId + idx + 1,
+        campanha_id: campanhaEditando.id,
+        loja_id: loja.loja_id,
+        codigo_loja: loja.codigo_loja,
+        meta_quantidade: loja.meta_quantidade,
+        meta_valor: loja.meta_valor,
+        realizado_quantidade: 0,
+        realizado_valor: 0,
+        grupo_id: loja.grupo_id.toString(),
+        status: 'ativa'
+      }));
+
+      const { error: erroParticipantes } = await supabase
+        .from('campanhas_vendas_lojas_participantes')
+        .insert(participantesData as any);
+
+      if (erroParticipantes) throw erroParticipantes;
+
+      toast({
+        title: "Sucesso",
+        description: "Campanha atualizada com sucesso"
+      });
+
+      // Resetar estados
+      setCampanhaEditando(null);
+      setLojasParticipantes([]);
+      setView('lista');
+      buscarCampanhas();
+      
+    } catch (error) {
+      console.error('Erro ao atualizar campanha:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar campanha",
+        variant: "destructive"
+      });
+    } finally {
+      setEditandoCampanha(false);
     }
   };
   
@@ -698,15 +855,9 @@ export default function Campanhas() {
                       <Eye size={14} />
                       Detalhes
                     </Button>
-                    <Button size="sm" variant="outline" className="gap-1" onClick={() => {
-                // Implementar modal de mudança de status
-                toast({
-                  title: "Em desenvolvimento",
-                  description: "Funcionalidade de alterar status em breve"
-                });
-              }}>
+                    <Button size="sm" variant="outline" className="gap-1" onClick={() => iniciarEdicaoCampanha(campanha)}>
                       <Edit size={14} />
-                      Status
+                      Editar
                     </Button>
                   </div>
                 </CardContent>
@@ -1115,6 +1266,262 @@ export default function Campanhas() {
         </Button>
       </div>
     </div>;
+  
+  const renderEditar = () => {
+    if (!campanhaEditando) return null;
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" onClick={() => setView('lista')} className="gap-2">
+            <ArrowLeft size={16} />
+            Voltar
+          </Button>
+          <h1 className="text-3xl font-bold">Editar Campanha de Vendas por Loja</h1>
+        </div>
+
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Edição de Campanha</AlertTitle>
+          <AlertDescription>
+            Você está editando uma campanha existente. As mudanças afetarão todas as lojas participantes.
+          </AlertDescription>
+        </Alert>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações da Campanha</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editNome">Nome da Campanha *</Label>
+                <Input
+                  id="editNome"
+                  value={campanhaEditando.nome}
+                  onChange={(e) => setCampanhaEditando(prev => ({ ...prev, nome: e.target.value }))}
+                  placeholder="Digite o nome da campanha"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editTipoMeta">Tipo de Meta *</Label>
+                <Select 
+                  value={campanhaEditando.tipo_meta} 
+                  onValueChange={(value) => setCampanhaEditando(prev => ({ ...prev, tipo_meta: value }))}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border z-50">
+                    <SelectItem value="quantidade">Quantidade</SelectItem>
+                    <SelectItem value="valor">Valor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="editDescricao">Descrição</Label>
+              <Textarea
+                id="editDescricao"
+                value={campanhaEditando.descricao}
+                onChange={(e) => setCampanhaEditando(prev => ({ ...prev, descricao: e.target.value }))}
+                placeholder="Descreva os objetivos e critérios da campanha"
+                rows={3}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editDataInicio">Data de Início *</Label>
+                <Input
+                  id="editDataInicio"
+                  type="date"
+                  value={campanhaEditando.data_inicio}
+                  onChange={(e) => setCampanhaEditando(prev => ({ ...prev, data_inicio: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editDataFim">Data de Fim *</Label>
+                <Input
+                  id="editDataFim"
+                  type="date"
+                  value={campanhaEditando.data_fim}
+                  onChange={(e) => setCampanhaEditando(prev => ({ ...prev, data_fim: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="editGrupoCampanha">Grupo da Campanha</Label>
+              <Select 
+                value={campanhaEditando.grupo_campanha} 
+                onValueChange={(value) => setCampanhaEditando(prev => ({ ...prev, grupo_campanha: value }))}
+              >
+                <SelectTrigger className="bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  <SelectItem value="1">Grupo 1</SelectItem>
+                  <SelectItem value="2">Grupo 2</SelectItem>
+                  <SelectItem value="3">Grupo 3</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Lojas Participantes</CardTitle>
+            <CardDescription>
+              Gerencie quais lojas participam da campanha e suas respectivas metas
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Botões de ação */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Selecionar todas as lojas (exceto "outras")
+                  const todasLojas = lojasDisponiveis
+                    .filter(loja => 
+                      loja.nome.toLowerCase() !== 'outras' && 
+                      loja.nome.toLowerCase() !== 'outro' &&
+                      loja.numero !== '999'
+                    )
+                    .map(loja => ({
+                      loja_id: loja.id,
+                      codigo_loja: parseInt(loja.numero),
+                      meta_quantidade: 0,
+                      meta_valor: 0,
+                      grupo_id: campanhaEditando.grupo_campanha || '1'
+                    }));
+                  setLojasParticipantes(todasLojas);
+                }}
+              >
+                Selecionar Todas
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setLojasParticipantes([])}>
+                Limpar Todas
+              </Button>
+            </div>
+
+            {/* Lista de lojas participantes */}
+            {lojasParticipantes.length > 0 && (
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {lojasParticipantes.map((loja, index) => {
+                  const lojaInfo = lojasDisponiveis.find(l => l.id === loja.loja_id);
+                  return (
+                    <Card key={index} className="p-3">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                        <div>
+                          <span className="font-medium">{lojaInfo?.numero}</span>
+                          <p className="text-sm text-muted-foreground">{lojaInfo?.nome}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Meta Quantidade</Label>
+                          <Input
+                            type="number"
+                            value={loja.meta_quantidade}
+                            onChange={(e) => {
+                              const novasLojas = [...lojasParticipantes];
+                              novasLojas[index].meta_quantidade = parseInt(e.target.value) || 0;
+                              setLojasParticipantes(novasLojas);
+                            }}
+                            className="h-8"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Meta Valor (R$)</Label>
+                          <Input
+                            type="number"
+                            value={loja.meta_valor}
+                            onChange={(e) => {
+                              const novasLojas = [...lojasParticipantes];
+                              novasLojas[index].meta_valor = parseFloat(e.target.value) || 0;
+                              setLojasParticipantes(novasLojas);
+                            }}
+                            className="h-8"
+                          />
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            const novasLojas = lojasParticipantes.filter((_, i) => i !== index);
+                            setLojasParticipantes(novasLojas);
+                          }}
+                        >
+                          <X size={14} />
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Dropdown para adicionar lojas */}
+            <div className="space-y-2">
+              <Label>Adicionar Loja</Label>
+              <Select
+                onValueChange={(value) => {
+                  const lojaId = parseInt(value);
+                  const loja = lojasDisponiveis.find(l => l.id === lojaId);
+                  if (loja && !lojasParticipantes.some(p => p.loja_id === lojaId)) {
+                    setLojasParticipantes(prev => [...prev, {
+                      loja_id: lojaId,
+                      codigo_loja: parseInt(loja.numero),
+                      meta_quantidade: 0,
+                      meta_valor: 0,
+                      grupo_id: campanhaEditando.grupo_campanha || '1'
+                    }]);
+                  }
+                }}
+              >
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Selecione uma loja para adicionar" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  {lojasDisponiveis
+                    .filter(loja => 
+                      !lojasParticipantes.some(p => p.loja_id === loja.id) &&
+                      loja.nome.toLowerCase() !== 'outras' && 
+                      loja.nome.toLowerCase() !== 'outro' &&
+                      loja.numero !== '999'
+                    )
+                    .map(loja => (
+                      <SelectItem key={loja.id} value={loja.id.toString()}>
+                        {loja.numero} - {loja.nome}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Botões de ação */}
+        <div className="flex gap-4">
+          <Button
+            onClick={salvarEdicaoCampanha}
+            disabled={editandoCampanha}
+            className="gap-2"
+          >
+            <CheckCircle size={16} />
+            {editandoCampanha ? 'Salvando...' : 'Salvar Alterações'}
+          </Button>
+          <Button variant="outline" onClick={() => setView('lista')}>
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    );
+  };
+  
   const renderVendasFuncionarios = () => <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
@@ -1626,6 +2033,7 @@ export default function Campanhas() {
       {view === 'lista' && renderLista()}
       {view === 'detalhes' && renderDetalhes()}
       {view === 'criar' && renderCriar()}
+      {view === 'editar' && renderEditar()}
       {view === 'vendas-funcionarios' && renderVendasFuncionarios()}
       {view === 'status' && renderStatus()}
     </div>;
