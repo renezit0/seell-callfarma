@@ -25,6 +25,8 @@ export interface CampanhaVendasLoja {
   NOMEFIL: string;
   TOTAL_VALOR: number;
   TOTAL_QUANTIDADE: number;
+  TOTAL_VLR_DV?: number; // Devoluções em valor
+  TOTAL_QTD_DV?: number; // Devoluções em quantidade
 }
 
 export interface FiltroCampanha {
@@ -307,12 +309,16 @@ export const useCallfarmaAPI = () => {
           const loja = lojasMap.get(cdfil)!;
           loja.TOTAL_VALOR += item.TOTAL_VLR_VE || 0;
           loja.TOTAL_QUANTIDADE += item.TOTAL_QTD_VE || 0;
+          loja.TOTAL_VLR_DV = (loja.TOTAL_VLR_DV || 0) + (item.TOTAL_VLR_DV || 0);
+          loja.TOTAL_QTD_DV = (loja.TOTAL_QTD_DV || 0) + (item.TOTAL_QTD_DV || 0);
         } else {
           lojasMap.set(cdfil, {
             CDFIL: cdfil,
             NOMEFIL: item.NOMEFIL,
             TOTAL_VALOR: item.TOTAL_VLR_VE || 0,
-            TOTAL_QUANTIDADE: item.TOTAL_QTD_VE || 0
+            TOTAL_QUANTIDADE: item.TOTAL_QTD_VE || 0,
+            TOTAL_VLR_DV: item.TOTAL_VLR_DV || 0,
+            TOTAL_QTD_DV: item.TOTAL_QTD_DV || 0
           });
         }
       });

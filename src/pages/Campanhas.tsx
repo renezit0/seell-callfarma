@@ -158,8 +158,8 @@ export default function Campanhas() {
         };
 
         const vendasApiExterna = await buscarVendasCampanha(filtros);
-        const totalRealizadoQuantidade = vendasApiExterna.reduce((sum, v) => sum + (v.TOTAL_QUANTIDADE || 0), 0);
-        const totalRealizadoValor = vendasApiExterna.reduce((sum, v) => sum + (v.TOTAL_VALOR || 0), 0);
+        const totalRealizadoQuantidade = vendasApiExterna.reduce((sum, v) => sum + (v.TOTAL_QUANTIDADE || 0) - (v.TOTAL_QTD_DV || 0), 0);
+        const totalRealizadoValor = vendasApiExterna.reduce((sum, v) => sum + (v.TOTAL_VALOR || 0) - (v.TOTAL_VLR_DV || 0), 0);
 
         // Buscar total das metas
         const { data: metas } = await supabase
@@ -229,8 +229,8 @@ export default function Campanhas() {
             
             return {
               ...loja,
-              realizado_quantidade: vendaApiExterna.TOTAL_QUANTIDADE,
-              realizado_valor: vendaApiExterna.TOTAL_VALOR,
+              realizado_quantidade: (vendaApiExterna.TOTAL_QUANTIDADE || 0) - (vendaApiExterna.TOTAL_QTD_DV || 0),
+              realizado_valor: (vendaApiExterna.TOTAL_VALOR || 0) - (vendaApiExterna.TOTAL_VLR_DV || 0),
               percentual_meta: meta > 0 ? (realizado / meta) * 100 : 0
             };
           }
@@ -315,8 +315,8 @@ export default function Campanhas() {
         
         // Buscar vendas da API externa pelo código da loja (cdfil)
         const vendaApiExterna = vendasApiExterna.find(v => v.CDFIL === participante.codigo_loja);
-        const totalQuantidade = vendaApiExterna?.TOTAL_QUANTIDADE || 0;
-        const totalValor = vendaApiExterna?.TOTAL_VALOR || 0;
+        const totalQuantidade = (vendaApiExterna?.TOTAL_QUANTIDADE || 0) - (vendaApiExterna?.TOTAL_QTD_DV || 0);
+        const totalValor = (vendaApiExterna?.TOTAL_VALOR || 0) - (vendaApiExterna?.TOTAL_VLR_DV || 0);
 
         // Usar as metas da tabela participantes
         const meta = campanha.tipo_meta === 'quantidade' 
@@ -333,8 +333,8 @@ export default function Campanhas() {
           loja_regiao: dadosLoja?.regiao,
           meta_quantidade: participante.meta_quantidade || 0,
           meta_valor: participante.meta_valor || 0,
-          realizado_quantidade: totalQuantidade,
-          realizado_valor: totalValor,
+          realizado_quantidade: (vendaApiExterna?.TOTAL_QUANTIDADE || 0) - (vendaApiExterna?.TOTAL_QTD_DV || 0),
+          realizado_valor: (vendaApiExterna?.TOTAL_VALOR || 0) - (vendaApiExterna?.TOTAL_VLR_DV || 0),
           percentual_meta: meta > 0 ? (realizado / meta) * 100 : 0,
           grupo_nome: participante.grupo_id,
           grupo_cor: undefined
