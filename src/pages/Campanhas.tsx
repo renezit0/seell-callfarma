@@ -235,10 +235,17 @@ export default function Campanhas() {
         .order('numero');
       if (error) throw error;
       
-      setLojasDisponiveis(data || []);
+      // Filtrar a loja "outras"
+      const lojasFiltered = (data || []).filter(loja => 
+        loja.nome.toLowerCase() !== 'outras' && 
+        loja.nome.toLowerCase() !== 'outro' &&
+        loja.numero !== '999'
+      );
       
-      // Pré-selecionar todas as lojas automaticamente
-      const lojasPreSelecionadas = (data || []).map(loja => ({
+      setLojasDisponiveis(lojasFiltered);
+      
+      // Pré-selecionar todas as lojas automaticamente (exceto "outras")
+      const lojasPreSelecionadas = lojasFiltered.map(loja => ({
         loja_id: loja.id,
         codigo_loja: parseInt(loja.numero),
         meta_quantidade: 0,
@@ -983,14 +990,20 @@ export default function Campanhas() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      // Selecionar todas as lojas
-                      const todasLojas = lojasDisponiveis.map(loja => ({
-                        loja_id: loja.id,
-                        codigo_loja: parseInt(loja.numero),
-                        meta_quantidade: 0,
-                        meta_valor: 0,
-                        grupo_id: novaCampanha.grupo_campanha
-                      }));
+                      // Selecionar todas as lojas (exceto "outras")
+                      const todasLojas = lojasDisponiveis
+                        .filter(loja => 
+                          loja.nome.toLowerCase() !== 'outras' && 
+                          loja.nome.toLowerCase() !== 'outro' &&
+                          loja.numero !== '999'
+                        )
+                        .map(loja => ({
+                          loja_id: loja.id,
+                          codigo_loja: parseInt(loja.numero),
+                          meta_quantidade: 0,
+                          meta_valor: 0,
+                          grupo_id: novaCampanha.grupo_campanha
+                        }));
                       setLojasParticipantes(todasLojas);
                     }}
                   >
