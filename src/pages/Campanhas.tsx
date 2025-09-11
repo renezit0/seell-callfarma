@@ -1382,27 +1382,30 @@ export default function Campanhas() {
                                   </Button>
                                 </div>
                                 <div className="space-y-2">
-                                  <div>
-                                    <Label className="text-xs">Meta Quantidade</Label>
-                                    <Input 
-                                      type="number" 
-                                      placeholder="0" 
-                                      className="h-8" 
-                                      value={lojaParticipante.meta_quantidade} 
-                                      onChange={e => atualizarMetaLoja(lojaParticipante.loja_id, 'meta_quantidade', parseInt(e.target.value) || 0)} 
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label className="text-xs">Meta Valor (R$)</Label>
-                                    <Input 
-                                      type="text" 
-                                      inputMode="decimal" 
-                                      placeholder="0,00" 
-                                      className="h-8" 
-                                      value={lojaParticipante.meta_valor} 
-                                      onChange={e => atualizarMetaLoja(lojaParticipante.loja_id, 'meta_valor', parseFloat(e.target.value.replace(',', '.')) || 0)} 
-                                    />
-                                  </div>
+                                  {novaCampanha.tipo_meta === 'quantidade' ? (
+                                    <div>
+                                      <Label className="text-xs">Meta Quantidade</Label>
+                                      <Input 
+                                        type="number" 
+                                        placeholder="0" 
+                                        className="h-8" 
+                                        value={lojaParticipante.meta_quantidade} 
+                                        onChange={e => atualizarMetaLoja(lojaParticipante.loja_id, 'meta_quantidade', parseInt(e.target.value) || 0)} 
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <Label className="text-xs">Meta Valor (R$)</Label>
+                                      <Input 
+                                        type="text" 
+                                        inputMode="decimal" 
+                                        placeholder="0,00" 
+                                        className="h-8" 
+                                        value={lojaParticipante.meta_valor} 
+                                        onChange={e => atualizarMetaLoja(lojaParticipante.loja_id, 'meta_valor', parseFloat(e.target.value.replace(',', '.')) || 0)} 
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -1617,34 +1620,37 @@ export default function Campanhas() {
                                   </Button>
                                 </div>
                                 <div className="space-y-2">
-                                  <div>
-                                    <Label className="text-xs">Meta Quantidade</Label>
-                                    <Input 
-                                      type="number" 
-                                      value={loja.meta_quantidade} 
-                                      onChange={e => {
-                                        const novasLojas = [...lojasParticipantes];
-                                        novasLojas[globalIndex].meta_quantidade = parseInt(e.target.value) || 0;
-                                        setLojasParticipantes(novasLojas);
-                                      }} 
-                                      className="h-8" 
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label className="text-xs">Meta Valor (R$)</Label>
-                                    <Input 
-                                      type="text" 
-                                      inputMode="decimal" 
-                                      value={loja.meta_valor} 
-                                      onChange={e => {
-                                        const novasLojas = [...lojasParticipantes];
-                                        const valor = parseFloat(e.target.value.replace(',', '.')) || 0;
-                                        novasLojas[globalIndex].meta_valor = valor;
-                                        setLojasParticipantes(novasLojas);
-                                      }} 
-                                      className="h-8" 
-                                    />
-                                  </div>
+                                  {campanhaEditando?.tipo_meta === 'quantidade' ? (
+                                    <div>
+                                      <Label className="text-xs">Meta Quantidade</Label>
+                                      <Input 
+                                        type="number" 
+                                        value={loja.meta_quantidade} 
+                                        onChange={e => {
+                                          const novasLojas = [...lojasParticipantes];
+                                          novasLojas[globalIndex].meta_quantidade = parseInt(e.target.value) || 0;
+                                          setLojasParticipantes(novasLojas);
+                                        }} 
+                                        className="h-8" 
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <Label className="text-xs">Meta Valor (R$)</Label>
+                                      <Input 
+                                        type="text" 
+                                        inputMode="decimal" 
+                                        value={loja.meta_valor} 
+                                        onChange={e => {
+                                          const novasLojas = [...lojasParticipantes];
+                                          const valor = parseFloat(e.target.value.replace(',', '.')) || 0;
+                                          novasLojas[globalIndex].meta_valor = valor;
+                                          setLojasParticipantes(novasLojas);
+                                        }} 
+                                        className="h-8" 
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             );
