@@ -43,18 +43,42 @@ export const VendasFuncionarios = () => {
 
       console.log('🔍 Buscando vendas para os produtos:', codigosLimpos);
 
-      const resultados = await buscarVendasPorProduto({
+      const resultadosBrutos = await buscarVendasPorProduto({
         dataInicio: filtros.dataInicio,
         dataFim: filtros.dataFim,
         codigosProdutos: codigosLimpos
       });
 
-      setResultadosProdutos(resultados);
-      setVendas([]); // Limpar vendas por funcionário
+      // Agregar os dados por funcionário (igual à busca normal)
+      const vendasAgregadas: { [key: string]: VendaFuncionario } = {};
+      
+      resultadosBrutos.forEach((item: any) => {
+        const chave = `${item.CDFUN}-${item.CDFIL}`;
+        
+        if (!vendasAgregadas[chave]) {
+          vendasAgregadas[chave] = {
+            CDFUN: item.CDFUN,
+            NOME: item.NOMEFUN,
+            CDFIL: item.CDFIL,
+            NOMEFIL: item.NOMEFIL,
+            TOTAL_VALOR: 0,
+            TOTAL_QUANTIDADE: 0
+          };
+        }
+        
+        vendasAgregadas[chave].TOTAL_VALOR += parseFloat(item.TOTAL_VLR_VE || 0) - parseFloat(item.TOTAL_VLR_DV || 0);
+        vendasAgregadas[chave].TOTAL_QUANTIDADE += parseInt(item.TOTAL_QTD_VE || 0) - parseInt(item.TOTAL_QTD_DV || 0);
+      });
+
+      const vendasArray = Object.values(vendasAgregadas);
+      console.log('Vendas agregadas:', vendasArray);
+      
+      setVendas(vendasArray);
+      setResultadosProdutos([]); // Limpar resultados por produto
 
       toast({
         title: "Sucesso",
-        description: `Encontrados ${resultados.length} registros de vendas por produto`,
+        description: `Encontrados ${vendasArray.length} funcionários com vendas dos produtos`,
       });
     } else {
       // Busca normal por funcionários
@@ -94,7 +118,6 @@ export const VendasFuncionarios = () => {
 
   // Determinar qual tipo de resultado mostrar
   const mostrarVendasFuncionarios = vendasArray.length > 0;
-  const mostrarVendasProdutos = resultadosProdutos.length > 0;
 
   return (
     <div className="space-y-6">
@@ -274,123 +297,6 @@ export const VendasFuncionarios = () => {
             </CardContent>
           </Card>
         </>
-      )}
-
-      {/* Resultados para Vendas por Produtos */}
-      {mostrarVendasProdutos && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Vendas por Produtos ({resultadosProdutos.length} registros)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse border">
-                <thead>
-                  <tr className="bg-muted">
-                    <th className="border p-2 text-left">Loja</th>
-                    <th className="border p-2 text-left">Funcionário</th>
-                    <th className="border p-2 text-left">Produto</th>
-                    <th className="border p-2 text-left">Data</th>
-                    <th className="border p-2 text-right">Qtd</th>
-                    <th className="border p-2 text-right">Valor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resultadosProdutos.slice(0, 50).map((item, index) => (
-                    <tr key={index} className="hover:bg-muted/50">
-                      <td className="border p-2">
-                        <div>
-                          <div className="font-medium">{item.NOMEFIL}</div>
-                          <div className="text-sm text-muted-foreground">CDFIL: {item.CDFIL}</div>
-                        </div>
-                      </td>
-                      <td className="border p-2">
-                        <div>
-                          <div className="font-medium">{item.NOMEFUN}</div>
-                          <div className="text-sm text-muted-foreground">CPF: {item.CPFFUN}</div>
-                        </div>
-                      </td>
-                      <td className="border p-2">
-                        <div>
-                          <div className="font-medium">{item.NOMEPRODU}</div>
-                          <div className="text-sm text-muted-foreground">
-                            Código: {item.CDPRODU} | Grupo: {item.NOMEGRUPO}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Marca: {item.NOMEMARCA}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="border p-2">
-                        {new Date(item.DATA).toLocaleDateString('pt-BR')}
-                      </td>
-                      <td className="border p-2 text-right">
-                        <div>{item.TOTAL_QTD_VE} un</div>
-                        {item.TOTAL_QTD_DV > 0 && (
-                          <div className="text-sm text-red-500">Devol: {item.TOTAL_QTD_DV}</div>
-                        )}
-                      </td>
-                      <td className="border p-2 text-right">
-                        <div className="font-medium">
-                          {new Intl.NumberFormat('pt-BR', { 
-                            style: 'currency', 
-                            currency: 'BRL' 
-                          }).format(item.TOTAL_VLR_VE)}
-                        </div>
-                        {item.TOTAL_VLR_DV > 0 && (
-                          <div className="text-sm text-red-500">
-                            Devol: {new Intl.NumberFormat('pt-BR', { 
-                              style: 'currency', 
-                              currency: 'BRL' 
-                            }).format(item.TOTAL_VLR_DV)}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {resultadosProdutos.length > 50 && (
-              <Alert className="mt-4">
-                <Info className="h-4 w-4" />
-                <AlertDescription>
-                  Mostrando apenas os primeiros 50 registros de {resultadosProdutos.length} encontrados.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Resumo para Produtos */}
-            <div className="mt-4 p-4 bg-muted rounded-lg">
-              <h4 className="font-semibold mb-2">Resumo</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <div className="text-muted-foreground">Total de Registros</div>
-                  <div className="font-medium">{resultadosProdutos.length}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Quantidade Total</div>
-                  <div className="font-medium">
-                    {resultadosProdutos.reduce((sum, item) => sum + (item.TOTAL_QTD_VE || 0), 0)} un
-                  </div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Valor Total</div>
-                  <div className="font-medium">
-                    {new Intl.NumberFormat('pt-BR', { 
-                      style: 'currency', 
-                      currency: 'BRL' 
-                    }).format(resultadosProdutos.reduce((sum, item) => sum + (item.TOTAL_VLR_VE || 0), 0))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       )}
     </div>
   );
