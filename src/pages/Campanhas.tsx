@@ -1636,6 +1636,23 @@ export default function Campanhas() {
                                   </Button>
                                 </div>
                                 <div className="space-y-2">
+                                  <div>
+                                    <Label className="text-xs">Grupo</Label>
+                                    <Select value={loja.grupo_id} onValueChange={value => {
+                                      const novasLojas = [...lojasParticipantes];
+                                      novasLojas[globalIndex].grupo_id = value;
+                                      setLojasParticipantes(novasLojas);
+                                    }}>
+                                      <SelectTrigger className="h-8">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="1">1</SelectItem>
+                                        <SelectItem value="2">2</SelectItem>
+                                        <SelectItem value="3">3</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
                                   {campanhaEditando?.tipo_meta === 'quantidade' ? (
                                     <div>
                                       <Label className="text-xs">Meta Quantidade</Label>
