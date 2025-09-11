@@ -22,6 +22,7 @@ import Usuarios from "./pages/Usuarios";
 import EditarUsuario from "./pages/EditarUsuario";
 import Configuracoes from "./pages/Configuracoes";
 import Rankings from "./pages/Rankings";
+import Status from "./pages/Status";
 import Graficos from "./pages/Graficos";
 import Escala from "./pages/Escala";
 import EscalaConsolidada from "./pages/EscalaConsolidada";
@@ -176,6 +177,7 @@ function AppContent() {
             <Route path="/graficos" element={<Graficos />} />
             <Route path="/relatorios" element={<Relatorios />} />
             <Route path="/rankings" element={<Rankings />} />
+            <Route path="/status" element={<Status />} />
             <Route path="/escala" element={<Escala />} />
             <Route path="/escala-consolidada" element={<EscalaConsolidada />} />
               <Route path="/usuarios" element={<Usuarios />} />
