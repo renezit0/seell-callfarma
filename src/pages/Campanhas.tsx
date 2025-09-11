@@ -508,13 +508,17 @@ export default function Campanhas() {
       const lojasMap = new Map<number, { grupo_id?: number }>((lojasGrupos || []).map(l => [l.id as number, { grupo_id: (l as any).grupo_id }]));
 
       // Mapear participantes para o formato esperado (grupo_id vindo do participante ou da loja)
-      const lojasParticipantesFormatadas = (participantes || []).map(p => ({
-        loja_id: p.loja_id,
-        codigo_loja: p.codigo_loja,
-        meta_quantidade: p.meta_quantidade || 0,
-        meta_valor: p.meta_valor || 0,
-        grupo_id: (p.grupo_id ? String(p.grupo_id) : String(lojasMap.get(p.loja_id as number)?.grupo_id ?? 1))
-      }));
+      const lojasParticipantesFormatadas = (participantes || []).map(p => {
+        const rawGrupo = (p.grupo_id as any) ?? lojasMap.get(p.loja_id as number)?.grupo_id ?? 1;
+        const normalizedGrupo = String(rawGrupo).replace(/\D/g, '') || '1';
+        return {
+          loja_id: p.loja_id,
+          codigo_loja: p.codigo_loja,
+          meta_quantidade: p.meta_quantidade || 0,
+          meta_valor: p.meta_valor || 0,
+          grupo_id: normalizedGrupo
+        };
+      });
 
       // Definir campanha para edição
       setCampanhaEditando({
@@ -1352,7 +1356,7 @@ export default function Campanhas() {
               <div className="grid gap-6 md:grid-cols-3">
                 {/* Renderizar cada grupo separadamente */}
                 {[1, 2, 3].map(grupoNumero => {
-                  const lojasDoGrupo = lojasParticipantes.filter(lojaParticipante => lojaParticipante.grupo_id === grupoNumero.toString());
+                  const lojasDoGrupo = lojasParticipantes.filter(lojaParticipante => Number(lojaParticipante.grupo_id) === grupoNumero);
                   
                   return (
                     <Card key={grupoNumero} className="h-fit">
@@ -1584,7 +1588,7 @@ export default function Campanhas() {
               <div className="grid gap-6 md:grid-cols-3">
                 {/* Renderizar cada grupo separadamente */}
                 {[1, 2, 3].map(grupoNumero => {
-                  const lojasDoGrupo = lojasParticipantes.filter(loja => loja.grupo_id === grupoNumero.toString());
+                  const lojasDoGrupo = lojasParticipantes.filter(loja => Number(loja.grupo_id) === grupoNumero);
                   
                   return (
                     <Card key={grupoNumero} className="h-fit">
