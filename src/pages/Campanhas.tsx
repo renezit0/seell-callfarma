@@ -1297,7 +1297,10 @@ export default function Campanhas() {
     }
   };
 
-  const formatarValorStatus = (valor: number) => {
+  const formatarValorCampanha = (valor: number, tipoCampanha: 'quantidade' | 'valor') => {
+    if (tipoCampanha === 'quantidade') {
+      return `${valor.toLocaleString('pt-BR')} un`;
+    }
     return new Intl.NumberFormat('pt-BR', { 
       style: 'currency', 
       currency: 'BRL' 
@@ -1405,14 +1408,19 @@ export default function Campanhas() {
 
           <TabsContent value="lojas" className="space-y-4">
             <div className="grid gap-4">
-              <div className="flex justify-between items-center">
+            {campanhaStatusSelecionada && (
+              <div className="text-right">
                 <h2 className="text-xl font-semibold">
                   {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.nome} - Ranking de Lojas por Grupo
                 </h2>
                 <Badge variant="secondary">
                   {gruposRanking.reduce((sum, grupo) => sum + grupo.totalLojas, 0)} lojas em {gruposRanking.length} grupos
                 </Badge>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Campanha por: {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta === 'quantidade' ? 'Quantidade' : 'Valor'}
+                </div>
               </div>
+            )}
               {gruposRanking.length === 0 ? (
                 <Card>
                   <CardContent className="text-center py-12">
@@ -1438,7 +1446,7 @@ export default function Campanhas() {
                               {grupo.totalLojas} lojas • {grupo.totalColaboradores} colaboradores
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {formatarValorStatus(grupo.totalVendas)} de {formatarValorStatus(grupo.totalMeta)}
+                              {formatarValorCampanha(grupo.totalVendas, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')} de {formatarValorCampanha(grupo.totalMeta, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')}
                             </div>
                           </div>
                         </div>
@@ -1463,10 +1471,10 @@ export default function Campanhas() {
                                       {loja.percentualAtingimento.toFixed(1)}%
                                     </p>
                                     <p className="text-sm text-muted-foreground">
-                                      {formatarValorStatus(loja.totalVendas)} de {formatarValorStatus(loja.meta)}
+                                      {formatarValorCampanha(loja.totalVendas, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')} de {formatarValorCampanha(loja.meta, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                      Média: {formatarValorStatus(loja.mediaVendasPorColaborador)}
+                                      Média: {formatarValorCampanha(loja.mediaVendasPorColaborador, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')}
                                     </p>
                                   </div>
                                 </div>
@@ -1484,14 +1492,19 @@ export default function Campanhas() {
 
           <TabsContent value="colaboradores" className="space-y-4">
             <div className="grid gap-4">
-              <div className="flex justify-between items-center">
+            {campanhaStatusSelecionada && (
+              <div className="text-right">
                 <h2 className="text-xl font-semibold">
                   {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.nome} - Ranking de Colaboradores por Grupo
                 </h2>
                 <Badge variant="secondary">
                   {gruposRanking.reduce((sum, grupo) => sum + grupo.totalColaboradores, 0)} colaboradores em {gruposRanking.length} grupos
                 </Badge>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Campanha por: {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta === 'quantidade' ? 'Quantidade' : 'Valor'}
+                </div>
               </div>
+            )}
               {gruposRanking.length === 0 ? (
                 <Card>
                   <CardContent className="text-center py-12">
@@ -1517,7 +1530,7 @@ export default function Campanhas() {
                               {grupo.totalColaboradores} colaboradores
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {formatarValorStatus(grupo.totalVendas)} de {formatarValorStatus(grupo.totalMeta)}
+                              {formatarValorCampanha(grupo.totalVendas, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')} de {formatarValorCampanha(grupo.totalMeta, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')}
                             </div>
                           </div>
                         </div>
@@ -1540,7 +1553,7 @@ export default function Campanhas() {
                                       {colaborador.percentualAtingimento.toFixed(1)}%
                                     </p>
                                     <p className="text-sm text-muted-foreground">
-                                      {formatarValorStatus(colaborador.totalVendas)} de {formatarValorStatus(colaborador.meta)}
+                                      {formatarValorCampanha(colaborador.totalVendas, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')} de {formatarValorCampanha(colaborador.meta, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')}
                                     </p>
                                   </div>
                                 </div>
