@@ -400,6 +400,7 @@ export type Database = {
           id: number
           marcas: number | null
           nome: string | null
+          produtos: string | null
           sem_metas: string | null
           status: string | null
           tipo_meta: string | null
@@ -417,6 +418,7 @@ export type Database = {
           id: number
           marcas?: number | null
           nome?: string | null
+          produtos?: string | null
           sem_metas?: string | null
           status?: string | null
           tipo_meta?: string | null
@@ -434,6 +436,7 @@ export type Database = {
           id?: number
           marcas?: number | null
           nome?: string | null
+          produtos?: string | null
           sem_metas?: string | null
           status?: string | null
           tipo_meta?: string | null

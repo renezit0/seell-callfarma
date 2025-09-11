@@ -153,7 +153,8 @@ export default function Campanhas() {
           filtroFornecedores: campanha.fornecedores?.toString(),
           filtroMarcas: campanha.marcas?.toString(),
           filtroFamilias: campanha.familias?.toString(),
-          filtroGrupos: campanha.grupos_produtos?.join(',')
+          filtroGrupos: campanha.grupos_produtos?.join(','),
+          filtroProduto: campanha.produtos?.toString() // Adicionar filtro por produto
         };
 
         const vendasApiExterna = await buscarVendasCampanha(filtros);
@@ -208,7 +209,8 @@ export default function Campanhas() {
         filtroFornecedores: campanha.fornecedores?.toString(),
         filtroMarcas: campanha.marcas?.toString(),
         filtroFamilias: campanha.familias?.toString(),
-        filtroGrupos: campanha.grupos_produtos?.join(',')
+        filtroGrupos: campanha.grupos_produtos?.join(','),
+        filtroProduto: campanha.produtos?.toString() // Adicionar filtro por produto
       };
 
       const vendasApiExterna = await buscarVendasCampanha(filtros);
@@ -299,7 +301,8 @@ export default function Campanhas() {
         filtroFornecedores: campanha.fornecedores?.toString(),
         filtroMarcas: campanha.marcas?.toString(),
         filtroFamilias: campanha.familias?.toString(),
-        filtroGrupos: campanha.grupos_produtos?.join(',')
+        filtroGrupos: campanha.grupos_produtos?.join(','),
+        filtroProduto: campanha.produtos?.toString() // Adicionar filtro por produto
       };
 
       console.log('Buscando dados da API externa com filtros:', filtros);
