@@ -21,7 +21,6 @@ const sidebarItems: SidebarItem[] = [
   { icon: "fas fa-store", label: "Metas da Loja", href: "/metas-loja" },
   { icon: "fas fa-bullhorn", label: "Campanhas", href: "/campanhas" },
   { icon: "fas fa-trophy", label: "Rankings", href: "/rankings" },
-  { icon: "fas fa-medal", label: "Status", href: "/status" },
   { icon: "fas fa-file-alt", label: "Relatórios", href: "/relatorios" },
   { icon: "fas fa-calendar-alt", label: "Escala", href: "/escala" },
   { icon: "fas fa-users", label: "Usuários", href: "/usuarios" },
