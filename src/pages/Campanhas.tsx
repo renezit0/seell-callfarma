@@ -9,32 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  ChartLine, 
-  Plus, 
-  Eye, 
-  Edit, 
-  Trophy, 
-  Store, 
-  Calendar, 
-  Target,
-  Users,
-  TrendingUp,
-  ArrowLeft,
-  Info,
-  CheckCircle,
-  Clock,
-  Award,
-  Medal,
-  Crown
-} from 'lucide-react';
+import { ChartLine, Plus, Eye, Edit, Trophy, Store, Calendar, Target, Users, TrendingUp, ArrowLeft, Info, CheckCircle, Clock, Award, Medal, Crown } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { VendasFuncionarios } from '@/components/VendasFuncionarios';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useCallfarmaAPI } from '@/hooks/useCallfarmaAPI';
 import { usePeriodoAtual } from '@/hooks/usePeriodoAtual';
-
 interface Campanha {
   id: number;
   nome: string;
@@ -51,7 +32,6 @@ interface Campanha {
   meta_total?: number;
   criador_nome?: string;
 }
-
 interface LojaParticipante {
   id: number;
   loja_id: number;
@@ -67,7 +47,6 @@ interface LojaParticipante {
   realizado_valor: number;
   percentual_meta: number;
 }
-
 interface CampanhaDetalhada extends Campanha {
   lojas: LojaParticipante[];
   estatisticas?: {
@@ -84,7 +63,6 @@ interface CampanhaDetalhada extends Campanha {
     status: string;
   }>;
 }
-
 interface LojaRanking {
   id: number;
   numero: string;
@@ -97,7 +75,6 @@ interface LojaRanking {
   mediaVendasPorColaborador: number;
   posicao: number;
 }
-
 interface ColaboradorRanking {
   id: number;
   nome: string;
@@ -107,7 +84,6 @@ interface ColaboradorRanking {
   totalVendas: number;
   posicao: number;
 }
-
 interface GrupoRanking {
   grupo_id: string;
   nome_grupo: string;
@@ -119,7 +95,6 @@ interface GrupoRanking {
   totalLojas: number;
   totalColaboradores: number;
 }
-
 export default function Campanhas() {
   const periodoAtual = usePeriodoAtual();
   const [view, setView] = useState<'lista' | 'detalhes' | 'criar' | 'vendas-funcionarios' | 'status'>('lista');
@@ -132,13 +107,13 @@ export default function Campanhas() {
     dataInicio: periodoAtual.dataInicio.toISOString().split('T')[0],
     dataFim: periodoAtual.dataFim.toISOString().split('T')[0]
   });
-  
+
   // Estados para status/ranking
   const [campanhaStatusSelecionada, setCampanhaStatusSelecionada] = useState<number | null>(null);
   const [campanhasStatus, setCampanhasStatus] = useState<Campanha[]>([]);
   const [gruposRanking, setGruposRanking] = useState<GrupoRanking[]>([]);
   const [viewMode, setViewMode] = useState<'lojas' | 'colaboradores'>('lojas');
-  
+
   // Estados para criação de campanhas
   const [novaCampanha, setNovaCampanha] = useState({
     nome: '',
@@ -152,9 +127,13 @@ export default function Campanhas() {
     grupos_produtos: '',
     produtos: '' // Novo campo para produtos específicos
   });
-  const { toast } = useToast();
-  const { buscarVendasCampanha, buscarVendasCampanhaDetalhada } = useCallfarmaAPI();
-
+  const {
+    toast
+  } = useToast();
+  const {
+    buscarVendasCampanha,
+    buscarVendasCampanhaDetalhada
+  } = useCallfarmaAPI();
   useEffect(() => {
     if (view === 'lista') {
       buscarCampanhas();
@@ -165,29 +144,30 @@ export default function Campanhas() {
   useEffect(() => {
     buscarCampanhas();
   }, []);
-
   const buscarCampanhas = async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from('campanhas_vendas_lojas')
-        .select('*');
-
+      let query = supabase.from('campanhas_vendas_lojas').select('*');
       if (!incluirInativas) {
         query = query.eq('status', 'ativa');
       }
-
-      const { data, error } = await query.order('data_fim', { ascending: true });
-
+      const {
+        data,
+        error
+      } = await query.order('data_fim', {
+        ascending: true
+      });
       if (error) throw error;
 
       // Buscar estatísticas para cada campanha
-      const campanhasComEstatisticas = await Promise.all((data || []).map(async (campanha) => {
+      const campanhasComEstatisticas = await Promise.all((data || []).map(async campanha => {
         // Buscar total de lojas participantes
-        const { count: totalLojas } = await supabase
-          .from('campanhas_vendas_lojas_participantes')
-          .select('*', { count: 'exact', head: true })
-          .eq('campanha_id', campanha.id);
+        const {
+          count: totalLojas
+        } = await supabase.from('campanhas_vendas_lojas_participantes').select('*', {
+          count: 'exact',
+          head: true
+        }).eq('campanha_id', campanha.id);
 
         // Buscar totais de vendas da API externa
         const filtros = {
@@ -199,21 +179,15 @@ export default function Campanhas() {
           filtroGrupos: campanha.grupos_produtos?.join(','),
           filtroProduto: campanha.produtos?.toString() // Adicionar filtro por produto
         };
-
         const vendasApiExterna = await buscarVendasCampanha(filtros);
         const totalRealizadoQuantidade = vendasApiExterna.reduce((sum, v) => sum + (v.TOTAL_QUANTIDADE || 0) - (v.TOTAL_QTD_DV || 0), 0);
         const totalRealizadoValor = vendasApiExterna.reduce((sum, v) => sum + (v.TOTAL_VALOR || 0) - (v.TOTAL_VLR_DV || 0), 0);
 
         // Buscar total das metas
-        const { data: metas } = await supabase
-          .from('campanhas_vendas_lojas_participantes')
-          .select('meta_quantidade, meta_valor')
-          .eq('campanha_id', campanha.id);
-
-        const metaTotal = campanha.tipo_meta === 'quantidade' 
-          ? (metas || []).reduce((sum, m) => sum + (m.meta_quantidade || 0), 0)
-          : (metas || []).reduce((sum, m) => sum + (m.meta_valor || 0), 0);
-
+        const {
+          data: metas
+        } = await supabase.from('campanhas_vendas_lojas_participantes').select('meta_quantidade, meta_valor').eq('campanha_id', campanha.id);
+        const metaTotal = campanha.tipo_meta === 'quantidade' ? (metas || []).reduce((sum, m) => sum + (m.meta_quantidade || 0), 0) : (metas || []).reduce((sum, m) => sum + (m.meta_valor || 0), 0);
         return {
           id: campanha.id,
           nome: campanha.nome || '',
@@ -230,19 +204,17 @@ export default function Campanhas() {
           meta_total: metaTotal
         };
       }));
-
       setCampanhas(campanhasComEstatisticas);
     } catch (error) {
       toast({
         title: "Erro",
         description: "Erro ao buscar campanhas",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
   const buscarVendasApiExterna = async (campanha: any) => {
     setLoadingApiExterna(true);
     try {
@@ -255,26 +227,20 @@ export default function Campanhas() {
         filtroGrupos: campanha.grupos_produtos?.join(','),
         filtroProduto: campanha.produtos?.toString() // Adicionar filtro por produto
       };
-
       const vendasApiExterna = await buscarVendasCampanha(filtros);
-      
+
       // Atualizar lojas da campanha com dados da API externa
       if (campanhaSelecionada && vendasApiExterna.length > 0) {
         const lojasAtualizadas = campanhaSelecionada.lojas.map(loja => {
           const vendaApiExterna = vendasApiExterna.find(v => v.CDFIL === loja.codigo_loja);
           if (vendaApiExterna) {
-            const realizado = campanhaSelecionada.tipo_meta === 'quantidade' 
-              ? vendaApiExterna.TOTAL_QUANTIDADE 
-              : vendaApiExterna.TOTAL_VALOR;
-            const meta = campanhaSelecionada.tipo_meta === 'quantidade' 
-              ? loja.meta_quantidade 
-              : loja.meta_valor;
-            
+            const realizado = campanhaSelecionada.tipo_meta === 'quantidade' ? vendaApiExterna.TOTAL_QUANTIDADE : vendaApiExterna.TOTAL_VALOR;
+            const meta = campanhaSelecionada.tipo_meta === 'quantidade' ? loja.meta_quantidade : loja.meta_valor;
             return {
               ...loja,
               realizado_quantidade: (vendaApiExterna.TOTAL_QUANTIDADE || 0) - (vendaApiExterna.TOTAL_QTD_DV || 0),
               realizado_valor: (vendaApiExterna.TOTAL_VALOR || 0) - (vendaApiExterna.TOTAL_VLR_DV || 0),
-              percentual_meta: meta > 0 ? (realizado / meta) * 100 : 0
+              percentual_meta: meta > 0 ? realizado / meta * 100 : 0
             };
           }
           return loja;
@@ -287,15 +253,13 @@ export default function Campanhas() {
           const realizadoB = tipoMeta === 'quantidade' ? b.realizado_quantidade : b.realizado_valor;
           return realizadoB - realizadoA;
         });
-
         setCampanhaSelecionada({
           ...campanhaSelecionada,
           lojas: lojasAtualizadas
         });
-
         toast({
           title: "Sucesso",
-          description: "Dados atualizados com a API externa",
+          description: "Dados atualizados com a API externa"
         });
       }
     } catch (error) {
@@ -303,39 +267,34 @@ export default function Campanhas() {
       toast({
         title: "Erro",
         description: "Erro ao buscar dados da API externa",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoadingApiExterna(false);
     }
   };
-
   const buscarDetalheCampanha = async (campanhaId: number) => {
     setLoading(true);
     try {
       // Buscar dados básicos da campanha de campanhas_vendas_lojas
-      const { data: campanha, error: erroCampanha } = await supabase
-        .from('campanhas_vendas_lojas')
-        .select('*')
-        .eq('id', campanhaId)
-        .single();
-
+      const {
+        data: campanha,
+        error: erroCampanha
+      } = await supabase.from('campanhas_vendas_lojas').select('*').eq('id', campanhaId).single();
       if (erroCampanha) throw erroCampanha;
 
       // Buscar lojas participantes de campanhas_vendas_lojas_participantes
-      const { data: participantes, error: erroParticipantes } = await supabase
-        .from('campanhas_vendas_lojas_participantes')
-        .select('*')
-        .eq('campanha_id', campanhaId);
-
+      const {
+        data: participantes,
+        error: erroParticipantes
+      } = await supabase.from('campanhas_vendas_lojas_participantes').select('*').eq('campanha_id', campanhaId);
       if (erroParticipantes) throw erroParticipantes;
 
       // Buscar dados das lojas para obter nomes e regiões
       const lojasIds = participantes?.map(p => p.loja_id).filter(Boolean) || [];
-      const { data: lojas } = await supabase
-        .from('lojas')
-        .select('id, nome, numero, regiao')
-        .in('id', lojasIds);
+      const {
+        data: lojas
+      } = await supabase.from('lojas').select('id, nome, numero, regiao').in('id', lojasIds);
 
       // BUSCAR DADOS DIRETAMENTE DA API EXTERNA
       const filtros = {
@@ -347,7 +306,6 @@ export default function Campanhas() {
         filtroGrupos: campanha.grupos_produtos?.join(','),
         filtroProduto: campanha.produtos?.toString() // Adicionar filtro por produto
       };
-
       console.log('Buscando dados da API externa com filtros:', filtros);
       const vendasApiExterna = await buscarVendasCampanha(filtros);
 
@@ -355,18 +313,15 @@ export default function Campanhas() {
       const lojasDetalhadas: LojaParticipante[] = (participantes || []).map(participante => {
         // Encontrar dados da loja
         const dadosLoja = lojas?.find(l => l.id === participante.loja_id);
-        
+
         // Buscar vendas da API externa pelo código da loja (cdfil)
         const vendaApiExterna = vendasApiExterna.find(v => v.CDFIL === participante.codigo_loja);
         const totalQuantidade = (vendaApiExterna?.TOTAL_QUANTIDADE || 0) - (vendaApiExterna?.TOTAL_QTD_DV || 0);
         const totalValor = (vendaApiExterna?.TOTAL_VALOR || 0) - (vendaApiExterna?.TOTAL_VLR_DV || 0);
 
         // Usar as metas da tabela participantes
-        const meta = campanha.tipo_meta === 'quantidade' 
-          ? participante.meta_quantidade || 0
-          : participante.meta_valor || 0;
+        const meta = campanha.tipo_meta === 'quantidade' ? participante.meta_quantidade || 0 : participante.meta_valor || 0;
         const realizado = campanha.tipo_meta === 'quantidade' ? totalQuantidade : totalValor;
-        
         return {
           id: participante.id,
           loja_id: participante.loja_id || 0,
@@ -378,7 +333,7 @@ export default function Campanhas() {
           meta_valor: participante.meta_valor || 0,
           realizado_quantidade: (vendaApiExterna?.TOTAL_QUANTIDADE || 0) - (vendaApiExterna?.TOTAL_QTD_DV || 0),
           realizado_valor: (vendaApiExterna?.TOTAL_VALOR || 0) - (vendaApiExterna?.TOTAL_VLR_DV || 0),
-          percentual_meta: meta > 0 ? (realizado / meta) * 100 : 0,
+          percentual_meta: meta > 0 ? realizado / meta * 100 : 0,
           grupo_nome: participante.grupo_id,
           grupo_cor: undefined
         };
@@ -393,10 +348,7 @@ export default function Campanhas() {
       });
 
       // Calcular estatísticas baseadas nos dados da API externa
-      const lojasComVendas = lojasDetalhadas.filter(l => 
-        tipoMeta === 'quantidade' ? l.realizado_quantidade > 0 : l.realizado_valor > 0
-      ).length;
-
+      const lojasComVendas = lojasDetalhadas.filter(l => tipoMeta === 'quantidade' ? l.realizado_quantidade > 0 : l.realizado_valor > 0).length;
       const campanhaDetalhada: CampanhaDetalhada = {
         id: campanha.id,
         nome: campanha.nome || '',
@@ -410,35 +362,31 @@ export default function Campanhas() {
         lojas: lojasDetalhadas,
         estatisticas: {
           total_lojas_com_vendas: lojasComVendas,
-          total_dias_com_dados: 0, // Não temos essa informação da API externa
+          total_dias_com_dados: 0,
+          // Não temos essa informação da API externa
           primeira_venda: undefined,
           ultima_venda: undefined
         }
       };
-
       setCampanhaSelecionada(campanhaDetalhada);
     } catch (error) {
       toast({
         title: "Erro",
         description: "Erro ao buscar detalhes da campanha",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
   const calcularProgresso = (realizado: number, meta: number, dataInicio: string, dataFim: string) => {
     const hoje = new Date();
     const inicio = new Date(dataInicio);
     const fim = new Date(dataFim);
-    
     const totalDias = Math.ceil((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const diasDecorridos = Math.max(0, Math.min(Math.ceil((hoje.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1, totalDias));
-    const percentualTempo = totalDias > 0 ? (diasDecorridos / totalDias) * 100 : 0;
-    
-    const percentualRealizado = meta > 0 ? (realizado / meta) * 100 : 0;
-    
+    const percentualTempo = totalDias > 0 ? diasDecorridos / totalDias * 100 : 0;
+    const percentualRealizado = meta > 0 ? realizado / meta * 100 : 0;
     let classeProgresso = 'bg-blue-500';
     if (percentualRealizado >= 100) {
       classeProgresso = 'bg-green-500';
@@ -449,7 +397,6 @@ export default function Campanhas() {
     } else {
       classeProgresso = 'bg-red-500';
     }
-    
     return {
       realizado,
       meta,
@@ -460,23 +407,19 @@ export default function Campanhas() {
       classeProgresso
     };
   };
-
   const formatarValor = (valor: number, tipo: 'quantidade' | 'valor') => {
     if (tipo === 'valor') {
-      return new Intl.NumberFormat('pt-BR', { 
-        style: 'currency', 
-        currency: 'BRL' 
+      return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
       }).format(valor);
     }
     return `${valor.toLocaleString('pt-BR')} un`;
   };
-
   const formatarData = (data: string) => {
     return new Date(data).toLocaleDateString('pt-BR');
   };
-
-  const renderLista = () => (
-    <div className="space-y-6">
+  const renderLista = () => <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">
           <ChartLine className="inline mr-3" />
@@ -487,19 +430,11 @@ export default function Campanhas() {
             <Plus size={16} />
             Nova Campanha
           </Button>
-          <Button 
-            onClick={() => setView('vendas-funcionarios')} 
-            variant="outline" 
-            className="gap-2"
-          >
+          <Button onClick={() => setView('vendas-funcionarios')} variant="outline" className="gap-2">
             <Users size={16} />
             Vendas API Externa
           </Button>
-          <Button 
-            onClick={() => setView('status')} 
-            variant="outline" 
-            className="gap-2"
-          >
+          <Button onClick={() => setView('status')} variant="outline" className="gap-2">
             <Trophy size={16} />
             Status & Rankings
           </Button>
@@ -514,76 +449,49 @@ export default function Campanhas() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="dataInicio">Data Início</Label>
-              <Input
-                id="dataInicio"
-                type="date"
-                value={filtroData.dataInicio}
-                onChange={(e) => setFiltroData(prev => ({ ...prev, dataInicio: e.target.value }))}
-              />
+              <Input id="dataInicio" type="date" value={filtroData.dataInicio} onChange={e => setFiltroData(prev => ({
+              ...prev,
+              dataInicio: e.target.value
+            }))} />
             </div>
             <div>
               <Label htmlFor="dataFim">Data Fim</Label>
-              <Input
-                id="dataFim"
-                type="date"
-                value={filtroData.dataFim}
-                onChange={(e) => setFiltroData(prev => ({ ...prev, dataFim: e.target.value }))}
-              />
+              <Input id="dataFim" type="date" value={filtroData.dataFim} onChange={e => setFiltroData(prev => ({
+              ...prev,
+              dataFim: e.target.value
+            }))} />
             </div>
             <div className="flex items-end">
-              <Button onClick={buscarCampanhas} className="w-full">
+              <Button onClick={buscarCampanhas} className="w-full text-zinc-600 bg-[#ffc032]">
                 Buscar Campanhas
               </Button>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button 
-              variant={!incluirInativas ? "default" : "outline"}
-              onClick={() => setIncluirInativas(false)}
-            >
+            <Button variant={!incluirInativas ? "default" : "outline"} onClick={() => setIncluirInativas(false)} className="text-slate-900 font-normal text-sm rounded-full bg-slate-400 hover:bg-slate-300">
               Ativas
             </Button>
-            <Button 
-              variant={incluirInativas ? "default" : "outline"}
-              onClick={() => setIncluirInativas(true)}
-            >
+            <Button variant={incluirInativas ? "default" : "outline"} onClick={() => setIncluirInativas(true)}>
               Todas
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {loading ? (
-        <div className="text-center py-8">Carregando campanhas...</div>
-      ) : campanhas.length === 0 ? (
-        <Card>
+      {loading ? <div className="text-center py-8">Carregando campanhas...</div> : campanhas.length === 0 ? <Card>
           <CardContent className="text-center py-12">
             <ChartLine className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground">Nenhuma campanha encontrada.</p>
           </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {campanhas.map((campanha) => {
-            const realizadoTotal = campanha.tipo_meta === 'quantidade' 
-              ? campanha.total_realizado_quantidade || 0
-              : campanha.total_realizado_valor || 0;
-            
-            const progresso = calcularProgresso(
-              realizadoTotal,
-              campanha.meta_total || 0,
-              campanha.data_inicio,
-              campanha.data_fim
-            );
-
-            return (
-              <Card key={campanha.id} className="hover:shadow-lg transition-shadow">
+        </Card> : <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {campanhas.map(campanha => {
+        const realizadoTotal = campanha.tipo_meta === 'quantidade' ? campanha.total_realizado_quantidade || 0 : campanha.total_realizado_valor || 0;
+        const progresso = calcularProgresso(realizadoTotal, campanha.meta_total || 0, campanha.data_inicio, campanha.data_fim);
+        return <Card key={campanha.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{campanha.nome}</CardTitle>
-                    <StatusBadge 
-                      status={campanha.status === 'ativa' ? 'atingido' : 'pendente'}
-                    />
+                    <StatusBadge status={campanha.status === 'ativa' ? 'atingido' : 'pendente'} />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -598,60 +506,42 @@ export default function Campanhas() {
                     </div>
                   </div>
 
-                  {!campanha.sem_metas && (
-                    <div className="space-y-2">
+                  {!campanha.sem_metas && <div className="space-y-2">
                       <Progress value={progresso.percentualRealizado} className="h-2" />
                       <div className="flex justify-between text-sm">
                         <span>{formatarValor(progresso.realizado, campanha.tipo_meta)}</span>
                         <span className="text-muted-foreground">{progresso.percentualRealizado.toFixed(1)}%</span>
                         <span>{formatarValor(progresso.meta, campanha.tipo_meta)}</span>
                       </div>
-                    </div>
-                  )}
+                    </div>}
 
                   <div className="flex gap-2">
-                    <Button 
-                      variant="secondary"
-                      size="sm" 
-                      onClick={() => {
-                        setView('detalhes');
-                        buscarDetalheCampanha(campanha.id);
-                      }}
-                      className="flex-1 gap-1"
-                    >
+                    <Button variant="secondary" size="sm" onClick={() => {
+                setView('detalhes');
+                buscarDetalheCampanha(campanha.id);
+              }} className="flex-1 gap-1">
                       <Eye size={14} />
                       Detalhes
                     </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="gap-1"
-                      onClick={() => {
-                        // Implementar modal de mudança de status
-                        toast({
-                          title: "Em desenvolvimento",
-                          description: "Funcionalidade de alterar status em breve",
-                        });
-                      }}
-                    >
+                    <Button size="sm" variant="outline" className="gap-1" onClick={() => {
+                // Implementar modal de mudança de status
+                toast({
+                  title: "Em desenvolvimento",
+                  description: "Funcionalidade de alterar status em breve"
+                });
+              }}>
                       <Edit size={14} />
                       Status
                     </Button>
                   </div>
                 </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-
+              </Card>;
+      })}
+        </div>}
+    </div>;
   const renderDetalhes = () => {
     if (!campanhaSelecionada) return null;
-
-    return (
-      <div className="space-y-6">
+    return <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Button variant="outline" size="sm" onClick={() => setView('lista')} className="gap-2">
@@ -659,15 +549,9 @@ export default function Campanhas() {
               Voltar
             </Button>
             <h1 className="text-3xl font-bold">{campanhaSelecionada.nome}</h1>
-            <StatusBadge 
-              status={campanhaSelecionada.status === 'ativa' ? 'atingido' : 'pendente'}
-            />
+            <StatusBadge status={campanhaSelecionada.status === 'ativa' ? 'atingido' : 'pendente'} />
           </div>
-          <Button 
-            onClick={() => buscarVendasApiExterna(campanhaSelecionada)}
-            disabled={loadingApiExterna}
-            className="gap-2"
-          >
+          <Button onClick={() => buscarVendasApiExterna(campanhaSelecionada)} disabled={loadingApiExterna} className="gap-2">
             <TrendingUp size={16} />
             {loadingApiExterna ? 'Atualizando...' : 'Atualizar API Externa'}
           </Button>
@@ -713,18 +597,13 @@ export default function Campanhas() {
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Renderizar cada grupo separadamente */}
-          {[1, 2, 3].map((grupoNumero) => {
-            const lojasDoGrupo = campanhaSelecionada.lojas
-              .filter(loja => loja.grupo_nome === grupoNumero.toString())
-              .sort((a, b) => {
-                // Ordenar por percentual de meta (maior para menor)
-                return b.percentual_meta - a.percentual_meta;
-              });
-            
-            if (lojasDoGrupo.length === 0) return null;
-
-            return (
-              <Card key={grupoNumero}>
+          {[1, 2, 3].map(grupoNumero => {
+          const lojasDoGrupo = campanhaSelecionada.lojas.filter(loja => loja.grupo_nome === grupoNumero.toString()).sort((a, b) => {
+            // Ordenar por percentual de meta (maior para menor)
+            return b.percentual_meta - a.percentual_meta;
+          });
+          if (lojasDoGrupo.length === 0) return null;
+          return <Card key={grupoNumero}>
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <Trophy className="h-5 w-5" />
@@ -734,22 +613,13 @@ export default function Campanhas() {
                 </CardHeader>
                 <CardContent className="space-y-1">
                   {lojasDoGrupo.map((loja, index) => {
-                    const valorRealizado = campanhaSelecionada.tipo_meta === 'quantidade' 
-                      ? loja.realizado_quantidade 
-                      : loja.realizado_valor;
-                    const valorMeta = campanhaSelecionada.tipo_meta === 'quantidade' 
-                      ? loja.meta_quantidade 
-                      : loja.meta_valor;
+                const valorRealizado = campanhaSelecionada.tipo_meta === 'quantidade' ? loja.realizado_quantidade : loja.realizado_valor;
+                const valorMeta = campanhaSelecionada.tipo_meta === 'quantidade' ? loja.meta_quantidade : loja.meta_valor;
 
-                    // Emoji de medalha baseado na posição
-                    let medalha = '';
-                    if (index === 0) medalha = '🥇';
-                    else if (index === 1) medalha = '🥈';
-                    else if (index === 2) medalha = '🥉';
-                    else medalha = `${index + 1}º`;
-
-                    return (
-                      <div key={loja.id} className="flex items-center justify-between py-1 px-2 bg-muted/30 rounded text-sm">
+                // Emoji de medalha baseado na posição
+                let medalha = '';
+                if (index === 0) medalha = '🥇';else if (index === 1) medalha = '🥈';else if (index === 2) medalha = '🥉';else medalha = `${index + 1}º`;
+                return <div key={loja.id} className="flex items-center justify-between py-1 px-2 bg-muted/30 rounded text-sm">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <div className="flex items-center justify-center min-w-[24px] h-6 rounded-full bg-secondary text-secondary-foreground font-bold text-xs border border-secondary-foreground/20">
                             {index < 3 ? <span className="text-xs">{medalha}</span> : <span className="text-[10px]">{medalha}</span>}
@@ -768,20 +638,15 @@ export default function Campanhas() {
                             ({Math.round(valorRealizado)}/{Math.round(valorMeta)}{campanhaSelecionada.tipo_meta === 'quantidade' ? 'un' : ''})
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      </div>;
+              })}
                 </CardContent>
-              </Card>
-            );
-          })}
+              </Card>;
+        })}
         </div>
-      </div>
-    );
+      </div>;
   };
-
-  const renderCriar = () => (
-    <div className="space-y-6">
+  const renderCriar = () => <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="outline" size="sm" onClick={() => setView('lista')} className="gap-2">
           <ArrowLeft size={16} />
@@ -805,19 +670,17 @@ export default function Campanhas() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="nome">Nome da Campanha *</Label>
-              <Input 
-                id="nome" 
-                placeholder="Digite o nome da campanha"
-                value={novaCampanha.nome}
-                onChange={(e) => setNovaCampanha(prev => ({ ...prev, nome: e.target.value }))}
-              />
+              <Input id="nome" placeholder="Digite o nome da campanha" value={novaCampanha.nome} onChange={e => setNovaCampanha(prev => ({
+              ...prev,
+              nome: e.target.value
+            }))} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="tipo_meta">Tipo de Meta</Label>
-              <Select 
-                value={novaCampanha.tipo_meta}
-                onValueChange={(value) => setNovaCampanha(prev => ({ ...prev, tipo_meta: value }))}
-              >
+              <Select value={novaCampanha.tipo_meta} onValueChange={value => setNovaCampanha(prev => ({
+              ...prev,
+              tipo_meta: value
+            }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -829,31 +692,25 @@ export default function Campanhas() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="data_inicio">Data de Início *</Label>
-              <Input 
-                id="data_inicio" 
-                type="date"
-                value={novaCampanha.data_inicio}
-                onChange={(e) => setNovaCampanha(prev => ({ ...prev, data_inicio: e.target.value }))}
-              />
+              <Input id="data_inicio" type="date" value={novaCampanha.data_inicio} onChange={e => setNovaCampanha(prev => ({
+              ...prev,
+              data_inicio: e.target.value
+            }))} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="data_fim">Data de Término *</Label>
-              <Input 
-                id="data_fim" 
-                type="date"
-                value={novaCampanha.data_fim}
-                onChange={(e) => setNovaCampanha(prev => ({ ...prev, data_fim: e.target.value }))}
-              />
+              <Input id="data_fim" type="date" value={novaCampanha.data_fim} onChange={e => setNovaCampanha(prev => ({
+              ...prev,
+              data_fim: e.target.value
+            }))} />
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="descricao">Descrição</Label>
-            <Textarea 
-              id="descricao" 
-              placeholder="Descreva os objetivos da campanha"
-              value={novaCampanha.descricao}
-              onChange={(e) => setNovaCampanha(prev => ({ ...prev, descricao: e.target.value }))}
-            />
+            <Textarea id="descricao" placeholder="Descreva os objetivos da campanha" value={novaCampanha.descricao} onChange={e => setNovaCampanha(prev => ({
+            ...prev,
+            descricao: e.target.value
+          }))} />
           </div>
 
           {/* Seção de Filtros de Produtos */}
@@ -862,50 +719,39 @@ export default function Campanhas() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="fornecedores">Fornecedores (IDs separados por vírgula)</Label>
-                <Input 
-                  id="fornecedores" 
-                  placeholder="Ex: 1998, 2001, 2005"
-                  value={novaCampanha.fornecedores}
-                  onChange={(e) => setNovaCampanha(prev => ({ ...prev, fornecedores: e.target.value }))}
-                />
+                <Input id="fornecedores" placeholder="Ex: 1998, 2001, 2005" value={novaCampanha.fornecedores} onChange={e => setNovaCampanha(prev => ({
+                ...prev,
+                fornecedores: e.target.value
+              }))} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="marcas">Marcas (IDs separados por vírgula)</Label>
-                <Input 
-                  id="marcas" 
-                  placeholder="Ex: 101, 102, 103"
-                  value={novaCampanha.marcas}
-                  onChange={(e) => setNovaCampanha(prev => ({ ...prev, marcas: e.target.value }))}
-                />
+                <Input id="marcas" placeholder="Ex: 101, 102, 103" value={novaCampanha.marcas} onChange={e => setNovaCampanha(prev => ({
+                ...prev,
+                marcas: e.target.value
+              }))} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="grupos">Grupos (IDs separados por vírgula)</Label>
-                <Input 
-                  id="grupos" 
-                  placeholder="Ex: 20, 25, 21"
-                  value={novaCampanha.grupos_produtos}
-                  onChange={(e) => setNovaCampanha(prev => ({ ...prev, grupos_produtos: e.target.value }))}
-                />
+                <Input id="grupos" placeholder="Ex: 20, 25, 21" value={novaCampanha.grupos_produtos} onChange={e => setNovaCampanha(prev => ({
+                ...prev,
+                grupos_produtos: e.target.value
+              }))} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="familias">Famílias (IDs separados por vírgula)</Label>
-                <Input 
-                  id="familias" 
-                  placeholder="Ex: 2017, 2018, 2019"
-                  value={novaCampanha.familias}
-                  onChange={(e) => setNovaCampanha(prev => ({ ...prev, familias: e.target.value }))}
-                />
+                <Input id="familias" placeholder="Ex: 2017, 2018, 2019" value={novaCampanha.familias} onChange={e => setNovaCampanha(prev => ({
+                ...prev,
+                familias: e.target.value
+              }))} />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="produtos">Produtos Específicos (Códigos separados por vírgula)</Label>
-              <Textarea 
-                id="produtos" 
-                placeholder="Ex: 23319, 52682, 58033, 60423, 60424, 60425..."
-                value={novaCampanha.produtos}
-                onChange={(e) => setNovaCampanha(prev => ({ ...prev, produtos: e.target.value }))}
-                rows={3}
-              />
+              <Textarea id="produtos" placeholder="Ex: 23319, 52682, 58033, 60423, 60424, 60425..." value={novaCampanha.produtos} onChange={e => setNovaCampanha(prev => ({
+              ...prev,
+              produtos: e.target.value
+            }))} rows={3} />
               <p className="text-sm text-muted-foreground">
                 Deixe em branco para usar apenas os filtros acima (fornecedores, marcas, grupos, famílias)
               </p>
@@ -923,11 +769,8 @@ export default function Campanhas() {
           Cancelar
         </Button>
       </div>
-    </div>
-  );
-
-  const renderVendasFuncionarios = () => (
-    <div className="space-y-6">
+    </div>;
+  const renderVendasFuncionarios = () => <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" onClick={() => setView('lista')} className="gap-2">
@@ -938,8 +781,7 @@ export default function Campanhas() {
         </div>
       </div>
       <VendasFuncionarios />
-    </div>
-  );
+    </div>;
 
   // Carregar dados do status quando a view mudar
   useEffect(() => {
@@ -947,13 +789,11 @@ export default function Campanhas() {
       carregarCampanhasStatus();
     }
   }, [view]);
-
   useEffect(() => {
     if (view === 'status' && campanhaStatusSelecionada) {
       carregarDadosStatus();
     }
   }, [campanhaStatusSelecionada, viewMode]);
-
   const carregarDadosStatus = async () => {
     setLoading(true);
     try {
@@ -967,23 +807,21 @@ export default function Campanhas() {
       toast({
         title: "Erro",
         description: "Erro ao carregar dados do status",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
   const carregarCampanhasStatus = async () => {
     try {
-      const { data, error } = await supabase
-        .from('campanhas_vendas_lojas')
-        .select('*')
-        .eq('status', 'ativa')
-        .order('data_fim', { ascending: true });
-
+      const {
+        data,
+        error
+      } = await supabase.from('campanhas_vendas_lojas').select('*').eq('status', 'ativa').order('data_fim', {
+        ascending: true
+      });
       if (error) throw error;
-
       const campanhasFormatadas = (data || []).map(campanha => ({
         id: campanha.id,
         nome: campanha.nome || '',
@@ -995,9 +833,8 @@ export default function Campanhas() {
         sem_metas: campanha.sem_metas === '1',
         criado_por: campanha.criado_por || 0
       }));
-
       setCampanhasStatus(campanhasFormatadas);
-      
+
       // Selecionar a primeira campanha automaticamente
       if (campanhasFormatadas.length > 0 && !campanhaStatusSelecionada) {
         setCampanhaStatusSelecionada(campanhasFormatadas[0].id);
@@ -1007,32 +844,26 @@ export default function Campanhas() {
       toast({
         title: "Erro",
         description: "Erro ao carregar campanhas",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const carregarRankingLojas = async () => {
     if (!campanhaStatusSelecionada) return;
-    
     try {
       // Buscar dados da campanha selecionada
-      const { data: campanha, error: erroCampanha } = await supabase
-        .from('campanhas_vendas_lojas')
-        .select('*')
-        .eq('id', campanhaStatusSelecionada)
-        .single();
-
+      const {
+        data: campanha,
+        error: erroCampanha
+      } = await supabase.from('campanhas_vendas_lojas').select('*').eq('id', campanhaStatusSelecionada).single();
       if (erroCampanha) throw erroCampanha;
 
       // Buscar lojas participantes da campanha
-      const { data: participantes, error: participantesError } = await supabase
-        .from('campanhas_vendas_lojas_participantes')
-        .select('*')
-        .eq('campanha_id', campanhaStatusSelecionada);
-
+      const {
+        data: participantes,
+        error: participantesError
+      } = await supabase.from('campanhas_vendas_lojas_participantes').select('*').eq('campanha_id', campanhaStatusSelecionada);
       if (participantesError) throw participantesError;
-
       if (!participantes || participantes.length === 0) {
         setGruposRanking([]);
         return;
@@ -1040,11 +871,10 @@ export default function Campanhas() {
 
       // Buscar dados das lojas
       const lojasIds = participantes.map(p => p.loja_id);
-      const { data: lojas, error: lojasError } = await supabase
-        .from('lojas')
-        .select('*')
-        .in('id', lojasIds);
-
+      const {
+        data: lojas,
+        error: lojasError
+      } = await supabase.from('lojas').select('*').in('id', lojasIds);
       if (lojasError) throw lojasError;
 
       // Buscar vendas da API externa para a campanha usando o período completo
@@ -1057,39 +887,28 @@ export default function Campanhas() {
         filtroGrupos: campanha.grupos_produtos?.join(','),
         filtroProduto: campanha.produtos?.toString()
       };
-
       const vendasApiExterna = await buscarVendasCampanha(filtros);
-
       const lojasComVendas: LojaRanking[] = [];
-
       for (const participante of participantes) {
         const loja = lojas?.find(l => l.id === participante.loja_id);
         if (!loja) continue;
 
         // Buscar vendas da API externa pelo código da loja
         const vendaApiExterna = vendasApiExterna.find(v => v.CDFIL === participante.codigo_loja);
-        const totalVendas = campanha.tipo_meta === 'quantidade' 
-          ? ((vendaApiExterna?.TOTAL_QUANTIDADE || 0) - (vendaApiExterna?.TOTAL_QTD_DV || 0))
-          : ((vendaApiExterna?.TOTAL_VALOR || 0) - (vendaApiExterna?.TOTAL_VLR_DV || 0));
+        const totalVendas = campanha.tipo_meta === 'quantidade' ? (vendaApiExterna?.TOTAL_QUANTIDADE || 0) - (vendaApiExterna?.TOTAL_QTD_DV || 0) : (vendaApiExterna?.TOTAL_VALOR || 0) - (vendaApiExterna?.TOTAL_VLR_DV || 0);
 
         // Buscar total de colaboradores da loja
-        const { count: totalColaboradores } = await supabase
-          .from('usuarios')
-          .select('*', { count: 'exact', head: true })
-          .eq('loja_id', loja.id)
-          .neq('tipo', 'admin');
-
-        const mediaVendasPorColaborador = totalColaboradores && totalColaboradores > 0 
-          ? totalVendas / totalColaboradores 
-          : 0;
+        const {
+          count: totalColaboradores
+        } = await supabase.from('usuarios').select('*', {
+          count: 'exact',
+          head: true
+        }).eq('loja_id', loja.id).neq('tipo', 'admin');
+        const mediaVendasPorColaborador = totalColaboradores && totalColaboradores > 0 ? totalVendas / totalColaboradores : 0;
 
         // Buscar meta da loja baseada no tipo da campanha
-        const meta = campanha.tipo_meta === 'quantidade' 
-          ? participante.meta_quantidade || 0
-          : participante.meta_valor || 0;
-        
-        const percentualAtingimento = meta > 0 ? (totalVendas / meta) * 100 : 0;
-
+        const meta = campanha.tipo_meta === 'quantidade' ? participante.meta_quantidade || 0 : participante.meta_valor || 0;
+        const percentualAtingimento = meta > 0 ? totalVendas / meta * 100 : 0;
         lojasComVendas.push({
           id: loja.id,
           numero: loja.numero,
@@ -1112,23 +931,20 @@ export default function Campanhas() {
         }
         gruposMap.get(loja.grupo_id)!.push(loja);
       });
-
       const grupos: GrupoRanking[] = [];
       gruposMap.forEach((lojasGrupo, grupoId) => {
         // Ordenar lojas do grupo por percentual de atingimento
         lojasGrupo.sort((a, b) => b.percentualAtingimento - a.percentualAtingimento);
-        
+
         // Adicionar posições dentro do grupo
         const lojasComPosicoes = lojasGrupo.map((loja, index) => ({
           ...loja,
           posicao: index + 1
         }));
-
         const totalVendasGrupo = lojasGrupo.reduce((sum, loja) => sum + loja.totalVendas, 0);
         const totalMetaGrupo = lojasGrupo.reduce((sum, loja) => sum + loja.meta, 0);
-        const percentualAtingimentoGrupo = totalMetaGrupo > 0 ? (totalVendasGrupo / totalMetaGrupo) * 100 : 0;
+        const percentualAtingimentoGrupo = totalMetaGrupo > 0 ? totalVendasGrupo / totalMetaGrupo * 100 : 0;
         const totalColaboradoresGrupo = lojasGrupo.reduce((sum, loja) => sum + loja.totalColaboradores, 0);
-
         grupos.push({
           grupo_id: grupoId,
           nome_grupo: `Grupo ${grupoId}`,
@@ -1144,28 +960,24 @@ export default function Campanhas() {
 
       // Ordenar grupos por percentual de atingimento
       grupos.sort((a, b) => b.percentualAtingimentoGrupo - a.percentualAtingimentoGrupo);
-
       setGruposRanking(grupos);
     } catch (error) {
       console.error('Erro ao carregar ranking de lojas:', error);
     }
   };
-
   const carregarRankingColaboradores = async () => {
     if (!campanhaStatusSelecionada) return;
     try {
       // 1) Dados da campanha e participantes
-      const { data: campanha, error: erroCampanha } = await supabase
-        .from('campanhas_vendas_lojas')
-        .select('*')
-        .eq('id', campanhaStatusSelecionada)
-        .single();
+      const {
+        data: campanha,
+        error: erroCampanha
+      } = await supabase.from('campanhas_vendas_lojas').select('*').eq('id', campanhaStatusSelecionada).single();
       if (erroCampanha) throw erroCampanha;
-
-      const { data: participantes, error: participantesError } = await supabase
-        .from('campanhas_vendas_lojas_participantes')
-        .select('*')
-        .eq('campanha_id', campanhaStatusSelecionada);
+      const {
+        data: participantes,
+        error: participantesError
+      } = await supabase.from('campanhas_vendas_lojas_participantes').select('*').eq('campanha_id', campanhaStatusSelecionada);
       if (participantesError) throw participantesError;
       if (!participantes || participantes.length === 0) {
         setGruposRanking([]);
@@ -1174,10 +986,10 @@ export default function Campanhas() {
 
       // 2) Buscar lojas para nomes e números
       const lojasIds = participantes.map(p => p.loja_id);
-      const { data: lojas, error: lojasError } = await supabase
-        .from('lojas')
-        .select('*')
-        .in('id', lojasIds);
+      const {
+        data: lojas,
+        error: lojasError
+      } = await supabase.from('lojas').select('*').in('id', lojasIds);
       if (lojasError) throw lojasError;
 
       // 3) Buscar vendas por COLABORADOR na API externa, filtrando por produtos
@@ -1199,11 +1011,8 @@ export default function Campanhas() {
         if (!participante) continue; // ignorar lojas fora da campanha
 
         const loja = lojas?.find(l => l.id === participante.loja_id);
-        const vendas = (campanha.tipo_meta === 'quantidade')
-          ? (Number(item.TOTAL_QTD_VE || 0) - Number(item.TOTAL_QTD_DV || 0))
-          : (Number(item.TOTAL_VLR_VE || 0) - Number(item.TOTAL_VLR_DV || 0));
+        const vendas = campanha.tipo_meta === 'quantidade' ? Number(item.TOTAL_QTD_VE || 0) - Number(item.TOTAL_QTD_DV || 0) : Number(item.TOTAL_VLR_VE || 0) - Number(item.TOTAL_VLR_DV || 0);
         if (vendas <= 0) continue;
-
         colaboradoresComVendas.push({
           id: Number(item.CDFUN) || 0,
           nome: item.NOMEFUN || 'Colaborador',
@@ -1221,11 +1030,13 @@ export default function Campanhas() {
         if (!gruposMap.has(c.grupo_id)) gruposMap.set(c.grupo_id, []);
         gruposMap.get(c.grupo_id)!.push(c);
       });
-
       const grupos: GrupoRanking[] = [];
       gruposMap.forEach((cols, grupoId) => {
         cols.sort((a, b) => b.totalVendas - a.totalVendas);
-        const colsComPosicao = cols.map((c, i) => ({ ...c, posicao: i + 1 }));
+        const colsComPosicao = cols.map((c, i) => ({
+          ...c,
+          posicao: i + 1
+        }));
         const totalVendasGrupo = cols.reduce((sum, c) => sum + c.totalVendas, 0);
         grupos.push({
           grupo_id: grupoId,
@@ -1239,40 +1050,34 @@ export default function Campanhas() {
           totalColaboradores: cols.length
         });
       });
-
       grupos.sort((a, b) => b.totalVendas - a.totalVendas);
       setGruposRanking(grupos);
     } catch (error) {
       console.error('Erro ao carregar ranking de colaboradores:', error);
     }
   };
-
   const formatarValorCampanha = (valor: number, tipoCampanha: 'quantidade' | 'valor') => {
     if (tipoCampanha === 'quantidade') {
       return `${valor.toLocaleString('pt-BR')} un`;
     }
-    return new Intl.NumberFormat('pt-BR', { 
-      style: 'currency', 
-      currency: 'BRL' 
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
     }).format(valor);
   };
-
   const obterIconePosicao = (posicao: number) => {
     if (posicao === 1) return <Crown className="h-6 w-6 text-yellow-500" />;
     if (posicao === 2) return <Medal className="h-6 w-6 text-gray-400" />;
     if (posicao === 3) return <Award className="h-6 w-6 text-amber-600" />;
     return <span className="text-lg font-bold text-muted-foreground">{posicao}º</span>;
   };
-
   const obterCorCard = (posicao: number) => {
     if (posicao === 1) return 'border-yellow-500 bg-yellow-50';
     if (posicao === 2) return 'border-gray-400 bg-gray-50';
     if (posicao === 3) return 'border-amber-600 bg-amber-50';
     return '';
   };
-
-  const renderStatus = () => (
-    <div className="space-y-6">
+  const renderStatus = () => <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" onClick={() => setView('lista')} className="gap-2">
@@ -1284,11 +1089,9 @@ export default function Campanhas() {
             Status e Rankings
           </h1>
         </div>
-        {campanhaStatusSelecionada && (
-          <Badge variant="outline" className="text-sm">
+        {campanhaStatusSelecionada && <Badge variant="outline" className="text-sm">
             {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.nome}
-          </Badge>
-        )}
+          </Badge>}
       </div>
 
       {/* Filtros */}
@@ -1300,38 +1103,25 @@ export default function Campanhas() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Campanha</label>
-              <Select 
-                value={campanhaStatusSelecionada?.toString() || ''} 
-                onValueChange={(value) => setCampanhaStatusSelecionada(parseInt(value))}
-              >
+              <Select value={campanhaStatusSelecionada?.toString() || ''} onValueChange={value => setCampanhaStatusSelecionada(parseInt(value))}>
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Selecione uma campanha" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border z-50">
-                  {campanhasStatus.map((campanha) => (
-                    <SelectItem key={campanha.id} value={campanha.id.toString()}>
+                  {campanhasStatus.map(campanha => <SelectItem key={campanha.id} value={campanha.id.toString()}>
                       {campanha.nome}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Visualização</label>
               <div className="flex gap-2">
-                <Button 
-                  variant={viewMode === 'lojas' ? "default" : "outline"}
-                  onClick={() => setViewMode('lojas')}
-                  className="flex-1"
-                >
+                <Button variant={viewMode === 'lojas' ? "default" : "outline"} onClick={() => setViewMode('lojas')} className="flex-1">
                   <Store className="h-4 w-4 mr-2" />
                   Lojas
                 </Button>
-                <Button 
-                  variant={viewMode === 'colaboradores' ? "default" : "outline"}
-                  onClick={() => setViewMode('colaboradores')}
-                  className="flex-1"
-                >
+                <Button variant={viewMode === 'colaboradores' ? "default" : "outline"} onClick={() => setViewMode('colaboradores')} className="flex-1">
                   <Users className="h-4 w-4 mr-2" />
                   Colaboradores
                 </Button>
@@ -1341,10 +1131,7 @@ export default function Campanhas() {
         </CardContent>
       </Card>
 
-      {loading ? (
-        <div className="text-center py-8">Carregando rankings...</div>
-      ) : (
-        <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'lojas' | 'colaboradores')}>
+      {loading ? <div className="text-center py-8">Carregando rankings...</div> : <Tabs value={viewMode} onValueChange={value => setViewMode(value as 'lojas' | 'colaboradores')}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="lojas" className="flex items-center gap-2">
               <Store className="h-4 w-4" />
@@ -1358,8 +1145,7 @@ export default function Campanhas() {
 
           <TabsContent value="lojas" className="space-y-4">
             <div className="grid gap-4">
-            {campanhaStatusSelecionada && (
-              <div className="text-right">
+            {campanhaStatusSelecionada && <div className="text-right">
                 <h2 className="text-xl font-semibold">
                   {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.nome} - Ranking de Lojas por Grupo
                 </h2>
@@ -1369,19 +1155,14 @@ export default function Campanhas() {
                 <div className="text-sm text-muted-foreground mt-1">
                   Campanha por: {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta === 'quantidade' ? 'Quantidade' : 'Valor'}
                 </div>
-              </div>
-            )}
-              {gruposRanking.length === 0 ? (
-                <Card>
+              </div>}
+              {gruposRanking.length === 0 ? <Card>
                   <CardContent className="text-center py-12">
                     <Store className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                     <p className="text-muted-foreground">Nenhuma loja com vendas encontrada no período.</p>
                   </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-6">
-                  {gruposRanking.map((grupo, grupoIndex) => (
-                    <Card key={grupo.grupo_id} className="border-2">
+                </Card> : <div className="space-y-6">
+                  {gruposRanking.map((grupo, grupoIndex) => <Card key={grupo.grupo_id} className="border-2">
                       <CardHeader className="pb-4">
                         <div className="flex items-center justify-between">
                           <CardTitle className="flex items-center gap-2">
@@ -1403,8 +1184,7 @@ export default function Campanhas() {
                       </CardHeader>
                       <CardContent>
                         <div className="grid gap-3">
-                          {grupo.lojas.map((loja) => (
-                            <Card key={loja.id} className={`transition-all hover:shadow-md ${obterCorCard(loja.posicao)}`}>
+                          {grupo.lojas.map(loja => <Card key={loja.id} className={`transition-all hover:shadow-md ${obterCorCard(loja.posicao)}`}>
                               <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
@@ -1429,21 +1209,17 @@ export default function Campanhas() {
                                   </div>
                                 </div>
                               </CardContent>
-                            </Card>
-                          ))}
+                            </Card>)}
                         </div>
                       </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+                    </Card>)}
+                </div>}
             </div>
           </TabsContent>
 
           <TabsContent value="colaboradores" className="space-y-4">
             <div className="grid gap-4">
-            {campanhaStatusSelecionada && (
-              <div className="text-center">
+            {campanhaStatusSelecionada && <div className="text-center">
                 <h2 className="text-xl font-semibold">
                   {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.nome} - Ranking de Colaboradores
                 </h2>
@@ -1453,19 +1229,14 @@ export default function Campanhas() {
                 <div className="text-sm text-muted-foreground mt-1">
                   Campanha por: {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta === 'quantidade' ? 'Quantidade' : 'Valor'}
                 </div>
-              </div>
-            )}
-              {gruposRanking.length === 0 ? (
-                <Card>
+              </div>}
+              {gruposRanking.length === 0 ? <Card>
                   <CardContent className="text-center py-12">
                     <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                     <p className="text-muted-foreground">Nenhum colaborador com vendas encontrado no período.</p>
                   </CardContent>
-                </Card>
-              ) : (
-                <div className="grid lg:grid-cols-3 gap-4">
-                  {gruposRanking.map((grupo, grupoIndex) => (
-                    <Card key={grupo.grupo_id} className="border-2 h-fit">
+                </Card> : <div className="grid lg:grid-cols-3 gap-4">
+                  {gruposRanking.map((grupo, grupoIndex) => <Card key={grupo.grupo_id} className="border-2 h-fit">
                       <CardHeader className="pb-3">
                         <div className="text-center">
                           <div className="flex items-center justify-center gap-2 mb-2">
@@ -1482,13 +1253,10 @@ export default function Campanhas() {
                       </CardHeader>
                       <CardContent className="pt-0">
                         <div className="space-y-2">
-                          {grupo.colaboradores.map((colaborador) => (
-                            <div key={colaborador.id} className={`flex items-center justify-between p-2 rounded-lg border transition-colors hover:bg-muted/50 ${obterCorCard(colaborador.posicao)}`}>
+                          {grupo.colaboradores.map(colaborador => <div key={colaborador.id} className={`flex items-center justify-between p-2 rounded-lg border transition-colors hover:bg-muted/50 ${obterCorCard(colaborador.posicao)}`}>
                               <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <div className="flex-shrink-0">
-                                  {colaborador.posicao <= 3 ? obterIconePosicao(colaborador.posicao) : (
-                                    <span className="text-sm font-semibold text-muted-foreground w-6 text-center">{colaborador.posicao}º</span>
-                                  )}
+                                  {colaborador.posicao <= 3 ? obterIconePosicao(colaborador.posicao) : <span className="text-sm font-semibold text-muted-foreground w-6 text-center">{colaborador.posicao}º</span>}
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="font-medium text-sm truncate">{colaborador.nome}</div>
@@ -1500,28 +1268,20 @@ export default function Campanhas() {
                                   {formatarValorCampanha(colaborador.totalVendas, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')}
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            </div>)}
                         </div>
                       </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+                    </Card>)}
+                </div>}
             </div>
           </TabsContent>
-        </Tabs>
-      )}
-    </div>
-  );
-
-  return (
-    <div className="page-container min-h-screen bg-background p-6">
+        </Tabs>}
+    </div>;
+  return <div className="page-container min-h-screen bg-background p-6">
       {view === 'lista' && renderLista()}
       {view === 'detalhes' && renderDetalhes()}
       {view === 'criar' && renderCriar()}
       {view === 'vendas-funcionarios' && renderVendasFuncionarios()}
       {view === 'status' && renderStatus()}
-    </div>
-  );
+    </div>;
 }
