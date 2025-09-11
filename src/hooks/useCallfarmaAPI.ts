@@ -510,7 +510,9 @@ export const useCallfarmaAPI = () => {
   }> => {
     setLoading(true);
     try {
-      console.log(`🔍 Buscando vendas de hoje consolidadas para CDFIL ${cdfil} em ${dataHoje}`);
+      const cdfilStr = cdfil.toString();
+      console.log(`🔍 Buscando vendas de hoje consolidadas para CDFIL ${cdfilStr} em ${dataHoje}`);
+      console.log(`🏪 Filtro será aplicado: filtroFiliais="${cdfilStr}"`);
       
       // APENAS 2 requisições para vendas de hoje
       const [dadosGeralHoje, dadosGruposHoje] = await Promise.all([
@@ -523,7 +525,7 @@ export const useCallfarmaAPI = () => {
               dataIni: dataHoje,
               groupBy: 'scefilial.CDFIL',
               orderBy: 'TOTAL_VLR_VE desc',
-              filtroFiliais: cdfil.toString().padStart(2, '0')
+              filtroFiliais: cdfilStr
             }
           }
         }),
@@ -537,27 +539,53 @@ export const useCallfarmaAPI = () => {
               filtroGrupos: '36,13,25,20,46,22',
               groupBy: 'scefilial.CDFIL,sceprodu.CDGRUPO',
               orderBy: 'TOTAL_VLR_VE desc',
-              filtroFiliais: cdfil.toString().padStart(2, '0')
+              filtroFiliais: cdfilStr
             }
           }
         })
       ]);
 
-      // Processar vendas gerais
+      console.log('🔍 Resposta da API - Dados Gerais:', dadosGeralHoje.data?.msg?.length || 0, 'registros');
+      console.log('🔍 Resposta da API - Dados Grupos:', dadosGruposHoje.data?.msg?.length || 0, 'registros');
+
+      // Processar vendas gerais com VALIDAÇÃO EXTRA
       const rawGeralHoje = dadosGeralHoje.data?.msg || [];
-      const totalGeral = rawGeralHoje.reduce((sum: number, item: any) => {
+      console.log('📊 Dados gerais recebidos:', rawGeralHoje);
+      
+      // FILTRO ADICIONAL: Garantir que apenas dados do CDFIL correto sejam processados
+      const dadosGeralFiltrados = rawGeralHoje.filter((item: any) => {
+        return item.CDFIL && item.CDFIL.toString() === cdfilStr;
+      });
+      
+      console.log(`🔍 Dados gerais após filtro local por CDFIL ${cdfilStr}:`, dadosGeralFiltrados.length, 'registros');
+      console.log('📊 Dados gerais filtrados:', dadosGeralFiltrados);
+      
+      const totalGeral = dadosGeralFiltrados.reduce((sum: number, item: any) => {
         const valorVenda = parseFloat(item.TOTAL_VLR_VE || 0);
         const valorDevolucao = parseFloat(item.TOTAL_VLR_DV || 0);
-        return sum + (valorVenda - valorDevolucao);
+        const valorLiquido = valorVenda - valorDevolucao;
+        console.log(`💰 Item geral CDFIL ${item.CDFIL}: R$ ${valorVenda} - R$ ${valorDevolucao} = R$ ${valorLiquido}`);
+        return sum + valorLiquido;
       }, 0);
 
-      // Processar vendas por grupos
+      // Processar vendas por grupos com VALIDAÇÃO EXTRA
       const rawGruposHoje = dadosGruposHoje.data?.msg || [];
-      const vendasPorGrupo = rawGruposHoje.reduce((acc: any, item: any) => {
+      console.log('📊 Dados grupos recebidos:', rawGruposHoje.length, 'registros');
+      
+      // FILTRO ADICIONAL: Garantir que apenas dados do CDFIL correto sejam processados
+      const dadosGruposFiltrados = rawGruposHoje.filter((item: any) => {
+        return item.CDFIL && item.CDFIL.toString() === cdfilStr;
+      });
+      
+      console.log(`🔍 Dados grupos após filtro local por CDFIL ${cdfilStr}:`, dadosGruposFiltrados.length, 'registros');
+      
+      const vendasPorGrupo = dadosGruposFiltrados.reduce((acc: any, item: any) => {
         const grupo = parseInt(item.CDGRUPO);
         const valorVenda = parseFloat(item.TOTAL_VLR_VE || 0);
         const valorDevolucao = parseFloat(item.TOTAL_VLR_DV || 0);
         const valorLiquido = valorVenda - valorDevolucao;
+        
+        console.log(`💼 Item grupo ${grupo} CDFIL ${item.CDFIL}: R$ ${valorVenda} - R$ ${valorDevolucao} = R$ ${valorLiquido}`);
 
         if ([20, 25].includes(grupo)) {
           acc.rentaveis += valorLiquido;
@@ -585,7 +613,7 @@ export const useCallfarmaAPI = () => {
         goodlife: vendasPorGrupo.goodlife
       };
 
-      console.log(`🎯 Vendas hoje CDFIL ${cdfil}:`, resultado);
+      console.log(`🎯 Vendas hoje CDFIL ${cdfil} (FILTRADAS LOCALMENTE):`, resultado);
       return resultado;
       
     } catch (error) {
