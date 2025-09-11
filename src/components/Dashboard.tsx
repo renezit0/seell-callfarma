@@ -19,10 +19,10 @@ import { useUserAvatar } from "@/hooks/useUserAvatar";
 function DashboardContent() {
   const { user, loading: authLoading } = useAuth();
   const { selectedPeriod } = usePeriodContext();
-  const { metrics, loading } = useDashboardData(user, selectedPeriod);
   const { avatarUrl } = useUserAvatar();
   const [lojaInfo, setLojaInfo] = useState<{ numero: string; nome: string } | null>(null);
   const [selectedLojaId, setSelectedLojaId] = useState<number | null>(null);
+  const { metrics, loading } = useDashboardData(user, selectedPeriod, selectedLojaId);
 
   // Verificar se é um tipo de usuário que deve mostrar dados individuais
   const shouldShowIndividualData = ['auxiliar', 'sublider', 'subgerente', 'consultora'].includes(user?.tipo || '');
