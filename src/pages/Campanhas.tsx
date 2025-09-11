@@ -127,6 +127,10 @@ export default function Campanhas() {
     grupos_produtos: '',
     produtos: '' // Novo campo para produtos específicos
   });
+  const [lojasDisponiveis, setLojasDisponiveis] = useState<any[]>([]);
+  const [lojasParticipantes, setLojasParticipantes] = useState<{loja_id: number, codigo_loja: number, meta_quantidade: number, meta_valor: number, grupo_id: string}[]>([]);
+  const [loadingLojas, setLoadingLojas] = useState(false);
+  const [criandoCampanha, setCriandoCampanha] = useState(false);
   const {
     toast
   } = useToast();
@@ -144,6 +148,12 @@ export default function Campanhas() {
   useEffect(() => {
     buscarCampanhas();
   }, []);
+  
+  useEffect(() => {
+    if (view === 'criar') {
+      carregarLojasDisponiveis();
+    }
+  }, [view]);
   const buscarCampanhas = async () => {
     setLoading(true);
     try {
@@ -151,23 +161,16 @@ export default function Campanhas() {
       if (!incluirInativas) {
         query = query.eq('status', 'ativa');
       }
-      const {
-        data,
-        error
-      } = await query.order('data_fim', {
-        ascending: true
-      });
+      const { data, error } = await query.order('data_fim', { ascending: true });
       if (error) throw error;
 
       // Buscar estatísticas para cada campanha
-      const campanhasComEstatisticas = await Promise.all((data || []).map(async campanha => {
+      const campanhasComEstatisticas = await Promise.all((data || []).map(async (campanha) => {
         // Buscar total de lojas participantes
-        const {
-          count: totalLojas
-        } = await supabase.from('campanhas_vendas_lojas_participantes').select('*', {
-          count: 'exact',
-          head: true
-        }).eq('campanha_id', campanha.id);
+        const { count: totalLojas } = await supabase
+          .from('campanhas_vendas_lojas_participantes')
+          .select('*', { count: 'exact', head: true })
+          .eq('campanha_id', campanha.id);
 
         // Buscar totais de vendas da API externa
         const filtros = {
@@ -180,22 +183,28 @@ export default function Campanhas() {
           filtroProduto: campanha.produtos?.toString() // Adicionar filtro por produto
         };
         const vendasApiExterna = await buscarVendasCampanha(filtros);
+        
         const totalRealizadoQuantidade = vendasApiExterna.reduce((sum, v) => sum + (v.TOTAL_QUANTIDADE || 0) - (v.TOTAL_QTD_DV || 0), 0);
         const totalRealizadoValor = vendasApiExterna.reduce((sum, v) => sum + (v.TOTAL_VALOR || 0) - (v.TOTAL_VLR_DV || 0), 0);
 
         // Buscar total das metas
-        const {
-          data: metas
-        } = await supabase.from('campanhas_vendas_lojas_participantes').select('meta_quantidade, meta_valor').eq('campanha_id', campanha.id);
-        const metaTotal = campanha.tipo_meta === 'quantidade' ? (metas || []).reduce((sum, m) => sum + (m.meta_quantidade || 0), 0) : (metas || []).reduce((sum, m) => sum + (m.meta_valor || 0), 0);
+        const { data: metas } = await supabase
+          .from('campanhas_vendas_lojas_participantes')
+          .select('meta_quantidade, meta_valor')
+          .eq('campanha_id', campanha.id);
+        
+        const metaTotal = campanha.tipo_meta === 'quantidade' 
+          ? (metas || []).reduce((sum, m) => sum + (m.meta_quantidade || 0), 0)
+          : (metas || []).reduce((sum, m) => sum + (m.meta_valor || 0), 0);
+
         return {
           id: campanha.id,
           nome: campanha.nome || '',
           descricao: campanha.descricao || '',
           data_inicio: campanha.data_inicio || '',
           data_fim: campanha.data_fim || '',
-          tipo_meta: campanha.tipo_meta as 'quantidade' | 'valor' || 'quantidade',
-          status: campanha.status as 'ativa' | 'inativa' | 'encerrada' || 'ativa',
+          tipo_meta: (campanha.tipo_meta as 'quantidade' | 'valor') || 'quantidade',
+          status: (campanha.status as 'ativa' | 'inativa' | 'encerrada') || 'ativa',
           sem_metas: campanha.sem_metas === '1',
           criado_por: campanha.criado_por || 0,
           total_lojas_participantes: totalLojas || 0,
@@ -215,6 +224,146 @@ export default function Campanhas() {
       setLoading(false);
     }
   };
+
+  const carregarLojasDisponiveis = async () => {
+    setLoadingLojas(true);
+    try {
+      const { data, error } = await supabase
+        .from('lojas')
+        .select('*')
+        .order('numero');
+      if (error) throw error;
+      
+      setLojasDisponiveis(data || []);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar lojas",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingLojas(false);
+    }
+  };
+
+  const adicionarLoja = (loja: any) => {
+    if (lojasParticipantes.find(l => l.loja_id === loja.id)) {
+      toast({
+        title: "Aviso",
+        description: "Esta loja já foi adicionada",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLojasParticipantes(prev => [...prev, {
+      loja_id: loja.id,
+      codigo_loja: parseInt(loja.numero),
+      meta_quantidade: 0,
+      meta_valor: 0,
+      grupo_id: loja.regiao || '1'
+    }]);
+  };
+
+  const removerLoja = (lojaId: number) => {
+    setLojasParticipantes(prev => prev.filter(l => l.loja_id !== lojaId));
+  };
+
+  const atualizarMetaLoja = (lojaId: number, campo: 'meta_quantidade' | 'meta_valor', valor: number) => {
+    setLojasParticipantes(prev => prev.map(l => 
+      l.loja_id === lojaId ? { ...l, [campo]: valor } : l
+    ));
+  };
+
+  const criarCampanha = async () => {
+    if (!novaCampanha.nome || !novaCampanha.data_inicio || !novaCampanha.data_fim) {
+      toast({
+        title: "Erro",
+        description: "Preencha os campos obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (lojasParticipantes.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Adicione pelo menos uma loja participante",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setCriandoCampanha(true);
+    try {
+      // Criar campanha
+      const { data: campanhaCriada, error: erroCampanha } = await supabase
+        .from('campanhas_vendas_lojas')
+        .insert([{
+          data_inicio: novaCampanha.data_inicio,
+          data_fim: novaCampanha.data_fim,
+          tipo_meta: novaCampanha.tipo_meta,
+          status: 'ativa',
+          sem_metas: '0',
+          criado_por: 1
+        }] as any)
+        .select()
+        .single();
+
+      if (erroCampanha) throw erroCampanha;
+
+      // Adicionar lojas participantes  
+      const participantesData = lojasParticipantes.map(loja => ({
+        campanha_id: campanhaCriada.id,
+        loja_id: loja.loja_id,
+        codigo_loja: loja.codigo_loja,
+        meta_quantidade: loja.meta_quantidade,
+        meta_valor: loja.meta_valor,
+        realizado_quantidade: 0,
+        realizado_valor: 0,
+        grupo_id: loja.grupo_id.toString(),
+        status: 'ativa'
+      }));
+
+      const { error: erroParticipantes } = await supabase
+        .from('campanhas_vendas_lojas_participantes')
+        .insert(participantesData as any);
+
+      if (erroParticipantes) throw erroParticipantes;
+
+      toast({
+        title: "Sucesso",
+        description: "Campanha criada com sucesso"
+      });
+
+      // Resetar formulário
+      setNovaCampanha({
+        nome: '',
+        descricao: '',
+        data_inicio: '',
+        data_fim: '',
+        tipo_meta: 'quantidade',
+        fornecedores: '',
+        marcas: '',
+        familias: '',
+        grupos_produtos: '',
+        produtos: ''
+      });
+      setLojasParticipantes([]);
+      setView('lista');
+      buscarCampanhas();
+    } catch (error) {
+      console.error('Erro ao criar campanha:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao criar campanha",
+        variant: "destructive"
+      });
+    } finally {
+      setCriandoCampanha(false);
+    }
+  };
+  
   const buscarVendasApiExterna = async (campanha: any) => {
     setLoadingApiExterna(true);
     try {
@@ -760,10 +909,126 @@ export default function Campanhas() {
         </CardContent>
       </Card>
 
+      {/* Seção de Lojas Participantes */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Store className="h-5 w-5" />
+            Lojas Participantes
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Lista de lojas disponíveis */}
+          <div className="space-y-2">
+            <Label>Selecionar Loja</Label>
+            <Select onValueChange={(lojaId) => {
+              const loja = lojasDisponiveis.find(l => l.id === parseInt(lojaId));
+              if (loja) adicionarLoja(loja);
+            }}>
+              <SelectTrigger>
+                <SelectValue placeholder="Escolha uma loja para adicionar" />
+              </SelectTrigger>
+              <SelectContent>
+                {lojasDisponiveis
+                  .filter(loja => !lojasParticipantes.find(l => l.loja_id === loja.id))
+                  .map(loja => (
+                    <SelectItem key={loja.id} value={loja.id.toString()}>
+                      {loja.numero} - {loja.nome} ({loja.regiao})
+                    </SelectItem>
+                  ))
+                }
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Lista de lojas participantes */}
+          {lojasParticipantes.length > 0 && (
+            <div className="space-y-3">
+              <Label>Lojas Participantes e Metas ({lojasParticipantes.length})</Label>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {lojasParticipantes.map(lojaParticipante => {
+                  const loja = lojasDisponiveis.find(l => l.id === lojaParticipante.loja_id);
+                  return (
+                    <div key={lojaParticipante.loja_id} className="p-3 border rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-medium">
+                          {loja?.numero} - {loja?.nome}
+                        </div>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => removerLoja(lojaParticipante.loja_id)}
+                        >
+                          Remover
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <Label className="text-xs">Grupo</Label>
+                          <Select 
+                            value={lojaParticipante.grupo_id} 
+                            onValueChange={(value) => {
+                              setLojasParticipantes(prev => prev.map(l => 
+                                l.loja_id === lojaParticipante.loja_id ? { ...l, grupo_id: value } : l
+                              ));
+                            }}
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">Grupo 1</SelectItem>
+                              <SelectItem value="2">Grupo 2</SelectItem>
+                              <SelectItem value="3">Grupo 3</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Meta Quantidade</Label>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            className="h-8"
+                            value={lojaParticipante.meta_quantidade}
+                            onChange={(e) => atualizarMetaLoja(
+                              lojaParticipante.loja_id, 
+                              'meta_quantidade', 
+                              parseInt(e.target.value) || 0
+                            )}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Meta Valor</Label>
+                          <Input
+                            type="number"
+                            placeholder="0.00"
+                            className="h-8"
+                            value={lojaParticipante.meta_valor}
+                            onChange={(e) => atualizarMetaLoja(
+                              lojaParticipante.loja_id, 
+                              'meta_valor', 
+                              parseFloat(e.target.value) || 0
+                            )}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="flex gap-4">
-        <Button className="gap-2">
+        <Button 
+          className="gap-2" 
+          onClick={criarCampanha}
+          disabled={criandoCampanha}
+        >
           <CheckCircle size={16} />
-          Criar Campanha
+          {criandoCampanha ? 'Criando...' : 'Criar Campanha'}
         </Button>
         <Button variant="outline" onClick={() => setView('lista')}>
           Cancelar
