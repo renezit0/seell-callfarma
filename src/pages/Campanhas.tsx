@@ -95,11 +95,6 @@ export default function Campanhas() {
     dataInicio: periodoAtual.dataInicio.toISOString().split('T')[0],
     dataFim: periodoAtual.dataFim.toISOString().split('T')[0]
   });
-  // Estados para pesquisa por produtos
-  const [codigosProdutos, setCodigosProdutos] = useState('23319, 52682, 58033, 60423, 60424, 60425, 60426, 60427, 60428, 61855, 61856, 62335, 64489, 75790, 75791, 77826');
-  const [resultadosProdutos, setResultadosProdutos] = useState<any[]>([]);
-  const [loadingProdutos, setLoadingProdutos] = useState(false);
-  const [mostrarPesquisaProdutos, setMostrarPesquisaProdutos] = useState(false);
   
   // Estados para criação de campanhas
   const [novaCampanha, setNovaCampanha] = useState({
@@ -115,7 +110,7 @@ export default function Campanhas() {
     produtos: '' // Novo campo para produtos específicos
   });
   const { toast } = useToast();
-  const { buscarVendasCampanha, buscarVendasPorProduto } = useCallfarmaAPI();
+  const { buscarVendasCampanha } = useCallfarmaAPI();
 
   useEffect(() => {
     if (view === 'lista') {
@@ -387,41 +382,6 @@ export default function Campanhas() {
     }
   };
 
-  const buscarProdutos = async () => {
-    setLoadingProdutos(true);
-    try {
-      const codigosLimpos = codigosProdutos
-        .split(',')
-        .map(c => c.trim())
-        .filter(c => c)
-        .join(',');
-
-      console.log('🔍 Buscando vendas para os produtos:', codigosLimpos);
-
-      const resultados = await buscarVendasPorProduto({
-        dataInicio: filtroData.dataInicio,
-        dataFim: filtroData.dataFim,
-        codigosProdutos: codigosLimpos
-      });
-
-      setResultadosProdutos(resultados);
-      
-      toast({
-        title: "Sucesso",
-        description: `Encontrados ${resultados.length} registros de vendas`,
-      });
-    } catch (error) {
-      console.error('Erro ao buscar produtos:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao buscar dados dos produtos",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingProdutos(false);
-    }
-  };
-
   const calcularProgresso = (realizado: number, meta: number, dataInicio: string, dataFim: string) => {
     const hoje = new Date();
     const inicio = new Date(dataInicio);
@@ -488,14 +448,6 @@ export default function Campanhas() {
           >
             <Users size={16} />
             Vendas API Externa
-          </Button>
-          <Button 
-            onClick={() => setMostrarPesquisaProdutos(!mostrarPesquisaProdutos)} 
-            variant={mostrarPesquisaProdutos ? "default" : "outline"} 
-            className="gap-2"
-          >
-            <Trophy size={16} />
-            {mostrarPesquisaProdutos ? 'Ocultar' : 'Pesquisar'} Produtos
           </Button>
         </div>
       </div>
@@ -637,168 +589,6 @@ export default function Campanhas() {
             );
           })}
         </div>
-      )}
-
-      {/* Seção de Pesquisa por Produtos */}
-      {mostrarPesquisaProdutos && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Pesquisar Vendas por Produtos</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dataInicioProdutos">Data Início</Label>
-                <Input
-                  id="dataInicioProdutos"
-                  type="date"
-                  value={filtroData.dataInicio}
-                  onChange={(e) => setFiltroData(prev => ({ ...prev, dataInicio: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="dataFimProdutos">Data Fim</Label>
-                <Input
-                  id="dataFimProdutos"
-                  type="date"
-                  value={filtroData.dataFim}
-                  onChange={(e) => setFiltroData(prev => ({ ...prev, dataFim: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="codigosProdutos">Códigos dos Produtos (separados por vírgula)</Label>
-              <Textarea
-                id="codigosProdutos"
-                placeholder="Ex: 23319, 52682, 58033, 60423..."
-                value={codigosProdutos}
-                onChange={(e) => setCodigosProdutos(e.target.value)}
-                rows={3}
-              />
-            </div>
-            <Button onClick={buscarProdutos} disabled={loadingProdutos}>
-              {loadingProdutos ? 'Buscando...' : 'Buscar Produtos'}
-            </Button>
-
-            {/* Resultados da Pesquisa */}
-            {resultadosProdutos.length > 0 && (
-              <div className="mt-6 space-y-4">
-                <h3 className="text-lg font-semibold">
-                  Resultados da Pesquisa ({resultadosProdutos.length} registros)
-                </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border">
-                    <thead>
-                      <tr className="bg-muted">
-                        <th className="border p-2 text-left">Loja</th>
-                        <th className="border p-2 text-left">Funcionário</th>
-                        <th className="border p-2 text-left">Produto</th>
-                        <th className="border p-2 text-left">Data</th>
-                        <th className="border p-2 text-right">Qtd</th>
-                        <th className="border p-2 text-right">Valor</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {resultadosProdutos.slice(0, 50).map((item, index) => (
-                        <tr key={index} className="hover:bg-muted/50">
-                          <td className="border p-2">
-                            <div>
-                              <div className="font-medium">{item.NOMEFIL}</div>
-                              <div className="text-sm text-muted-foreground">CDFIL: {item.CDFIL}</div>
-                            </div>
-                          </td>
-                          <td className="border p-2">
-                            <div>
-                              <div className="font-medium">{item.NOMEFUN}</div>
-                              <div className="text-sm text-muted-foreground">CPF: {item.CPFFUN}</div>
-                            </div>
-                          </td>
-                          <td className="border p-2">
-                            <div>
-                              <div className="font-medium">{item.NOMEPRODU}</div>
-                              <div className="text-sm text-muted-foreground">
-                                Código: {item.CDPRODU} | Grupo: {item.NOMEGRUPO}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                Marca: {item.NOMEMARCA}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="border p-2">
-                            {new Date(item.DATA).toLocaleDateString('pt-BR')}
-                          </td>
-                          <td className="border p-2 text-right">
-                            <div>{item.TOTAL_QTD_VE} un</div>
-                            {item.TOTAL_QTD_DV > 0 && (
-                              <div className="text-sm text-red-500">Devol: {item.TOTAL_QTD_DV}</div>
-                            )}
-                          </td>
-                          <td className="border p-2 text-right">
-                            <div className="font-medium">
-                              {new Intl.NumberFormat('pt-BR', { 
-                                style: 'currency', 
-                                currency: 'BRL' 
-                              }).format(item.TOTAL_VLR_VE)}
-                            </div>
-                            {item.TOTAL_VLR_DV > 0 && (
-                              <div className="text-sm text-red-500">
-                                Devol: {new Intl.NumberFormat('pt-BR', { 
-                                  style: 'currency', 
-                                  currency: 'BRL' 
-                                }).format(item.TOTAL_VLR_DV)}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {resultadosProdutos.length > 50 && (
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      Mostrando apenas os primeiros 50 registros de {resultadosProdutos.length} encontrados.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {/* Resumo */}
-                <div className="p-4 bg-muted rounded-lg">
-                  <h4 className="font-semibold mb-2">Resumo</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <div className="text-muted-foreground">Total de Registros</div>
-                      <div className="font-medium">{resultadosProdutos.length}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">Quantidade Total</div>
-                      <div className="font-medium">
-                        {resultadosProdutos.reduce((sum, item) => sum + (item.TOTAL_QTD_VE || 0), 0)} un
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">Valor Total</div>
-                      <div className="font-medium">
-                        {new Intl.NumberFormat('pt-BR', { 
-                          style: 'currency', 
-                          currency: 'BRL' 
-                        }).format(resultadosProdutos.reduce((sum, item) => sum + (item.TOTAL_VLR_VE || 0), 0))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {resultadosProdutos.length === 0 && !loadingProdutos && (
-              <div className="text-center py-8 text-muted-foreground">
-                Use os filtros acima para pesquisar vendas por produtos específicos.
-              </div>
-            )}
-          </CardContent>
-        </Card>
       )}
     </div>
   );
