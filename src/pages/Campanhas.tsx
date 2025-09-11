@@ -121,6 +121,7 @@ export default function Campanhas() {
     data_inicio: '',
     data_fim: '',
     tipo_meta: 'quantidade',
+    grupo_campanha: '1', // Grupo padrão da campanha
     fornecedores: '',
     marcas: '',
     familias: '',
@@ -261,7 +262,7 @@ export default function Campanhas() {
       codigo_loja: parseInt(loja.numero),
       meta_quantidade: 0,
       meta_valor: 0,
-      grupo_id: loja.regiao || '1'
+      grupo_id: novaCampanha.grupo_campanha // Usar o grupo selecionado da campanha
     }]);
   };
 
@@ -337,12 +338,13 @@ export default function Campanhas() {
       });
 
       // Resetar formulário
-      setNovaCampanha({
+        setNovaCampanha({
         nome: '',
         descricao: '',
         data_inicio: '',
         data_fim: '',
         tipo_meta: 'quantidade',
+        grupo_campanha: '1',
         fornecedores: '',
         marcas: '',
         familias: '',
@@ -836,6 +838,22 @@ export default function Campanhas() {
                 <SelectContent>
                   <SelectItem value="quantidade">Quantidade</SelectItem>
                   <SelectItem value="valor">Valor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="grupo_campanha">Grupo da Campanha</Label>
+              <Select value={novaCampanha.grupo_campanha} onValueChange={value => setNovaCampanha(prev => ({
+              ...prev,
+              grupo_campanha: value
+            }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Grupo 1</SelectItem>
+                  <SelectItem value="2">Grupo 2</SelectItem>
+                  <SelectItem value="3">Grupo 3</SelectItem>
                 </SelectContent>
               </Select>
             </div>
