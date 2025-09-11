@@ -240,14 +240,14 @@
     --text-on-secondary: 0 0% 100%;
 
     /* Sidebar Colors */
-    --sidebar-background: 224 76% 48%; /* Primary color for sidebar */
+    --sidebar-background: 0 0% 13%; /* #212121 */
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 224 76% 48%;
+    --sidebar-primary: 0 0% 13%; /* #212121 para ícones */
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 100% / 0.1;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 0 0% 100% / 0.1;
-    --sidebar-ring: 224 76% 48%;
+    --sidebar-ring: 0 0% 13%;
 
     /* Animation Variables */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -283,14 +283,14 @@
     --ring: 224 76% 48%;
 
     /* Dashboard Dark Colors */
-    --sidebar-background: 220 18% 14%;
+    --sidebar-background: 0 0% 13%; /* #212121 */
     --sidebar-foreground: 210 20% 98%;
-    --sidebar-primary: 224 76% 48%;
+    --sidebar-primary: 0 0% 13%; /* #212121 para ícones */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 18%;
+    --sidebar-accent: 0 0% 100% / 0.1;
     --sidebar-accent-foreground: 210 20% 98%;
-    --sidebar-border: 220 15% 22%;
-    --sidebar-ring: 224 76% 48%;
+    --sidebar-border: 0 0% 100% / 0.1;
+    --sidebar-ring: 0 0% 13%;
   }
 }
 
