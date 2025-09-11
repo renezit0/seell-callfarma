@@ -1443,9 +1443,9 @@ export default function Campanhas() {
           <TabsContent value="colaboradores" className="space-y-4">
             <div className="grid gap-4">
             {campanhaStatusSelecionada && (
-              <div className="text-right">
+              <div className="text-center">
                 <h2 className="text-xl font-semibold">
-                  {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.nome} - Ranking de Colaboradores por Grupo
+                  {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.nome} - Ranking de Colaboradores
                 </h2>
                 <Badge variant="secondary">
                   {gruposRanking.reduce((sum, grupo) => sum + grupo.totalColaboradores, 0)} colaboradores em {gruposRanking.length} grupos
@@ -1463,46 +1463,44 @@ export default function Campanhas() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-6">
+                <div className="grid lg:grid-cols-3 gap-4">
                   {gruposRanking.map((grupo, grupoIndex) => (
-                    <Card key={grupo.grupo_id} className="border-2">
-                      <CardHeader className="pb-4">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="flex items-center gap-2">
-                            <span className="text-2xl font-bold">#{grupoIndex + 1}</span>
-                            <span>{grupo.nome_grupo}</span>
-                          </CardTitle>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-primary">
-                              {formatarValorCampanha(grupo.totalVendas, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {grupo.totalColaboradores} colaboradores
-                            </div>
+                    <Card key={grupo.grupo_id} className="border-2 h-fit">
+                      <CardHeader className="pb-3">
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-2 mb-2">
+                            <span className="text-lg font-bold">#{grupoIndex + 1}</span>
+                            <span className="text-lg font-semibold">{grupo.nome_grupo}</span>
+                          </div>
+                          <div className="text-xl font-bold text-primary">
+                            {formatarValorCampanha(grupo.totalVendas, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {grupo.totalColaboradores} colaboradores
                           </div>
                         </div>
                       </CardHeader>
-                      <CardContent>
-                        <div className="grid gap-3">
+                      <CardContent className="pt-0">
+                        <div className="space-y-2">
                           {grupo.colaboradores.map((colaborador) => (
-                            <Card key={colaborador.id} className={`transition-all hover:shadow-md ${obterCorCard(colaborador.posicao)}`}>
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    {obterIconePosicao(colaborador.posicao)}
-                                    <div>
-                                      <h4 className="font-semibold">{colaborador.nome}</h4>
-                                      <p className="text-sm text-muted-foreground">{colaborador.loja_nome}</p>
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-xl font-bold text-primary">
-                                      {formatarValorCampanha(colaborador.totalVendas, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')}
-                                    </p>
-                                  </div>
+                            <div key={colaborador.id} className={`flex items-center justify-between p-2 rounded-lg border transition-colors hover:bg-muted/50 ${obterCorCard(colaborador.posicao)}`}>
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <div className="flex-shrink-0">
+                                  {colaborador.posicao <= 3 ? obterIconePosicao(colaborador.posicao) : (
+                                    <span className="text-sm font-semibold text-muted-foreground w-6 text-center">{colaborador.posicao}º</span>
+                                  )}
                                 </div>
-                              </CardContent>
-                            </Card>
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium text-sm truncate">{colaborador.nome}</div>
+                                  <div className="text-xs text-muted-foreground truncate">{colaborador.loja_nome}</div>
+                                </div>
+                              </div>
+                              <div className="text-right flex-shrink-0 ml-2">
+                                <div className="text-sm font-bold text-primary">
+                                  {formatarValorCampanha(colaborador.totalVendas, campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.tipo_meta || 'valor')}
+                                </div>
+                              </div>
+                            </div>
                           ))}
                         </div>
                       </CardContent>
