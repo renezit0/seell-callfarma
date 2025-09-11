@@ -288,7 +288,7 @@ export default function Campanhas() {
       codigo_loja: parseInt(loja.numero),
       meta_quantidade: 0,
       meta_valor: 0,
-      grupo_id: (loja.grupo_id ?? 1).toString()
+      grupo_id: '1'
     }]);
   };
   const removerLoja = (lojaId: number) => {
@@ -1241,15 +1241,10 @@ export default function Campanhas() {
               <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
                 <div className="space-y-2">
                   <Label htmlFor="numeroLoja">Número da Loja *</Label>
-                  <Input id="numeroLoja" type="text" value={formRapido.numeroLoja} onChange={e => {
-                  const valor = e.target.value;
-                  const lojaEncontrada = buscarLojaPorNumero(valor);
-                  setFormRapido(prev => ({
-                    ...prev,
-                    numeroLoja: valor,
-                    grupo: lojaEncontrada ? (lojaEncontrada.grupo_id ?? 1).toString() : prev.grupo
-                  }));
-                }} placeholder="Ex: 22" className="text-center font-medium" onKeyPress={e => {
+                  <Input id="numeroLoja" type="text" value={formRapido.numeroLoja} onChange={e => setFormRapido(prev => ({
+                  ...prev,
+                  numeroLoja: e.target.value
+                }))} placeholder="Ex: 22" className="text-center font-medium" onKeyPress={e => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
                     const loja = buscarLojaPorNumero(formRapido.numeroLoja);
@@ -1342,7 +1337,7 @@ export default function Campanhas() {
                   codigo_loja: parseInt(loja.numero),
                   meta_quantidade: 0,
                   meta_valor: 0,
-                  grupo_id: (loja.grupo_id ?? 1).toString()
+                  grupo_id: '1'
                 }));
                 setLojasParticipantes(todasLojas);
               }}>
@@ -1386,6 +1381,21 @@ export default function Campanhas() {
                                   </Button>
                                 </div>
                                 <div className="space-y-2">
+                                  <div>
+                                    <Label className="text-xs">Grupo</Label>
+                                    <Select value={lojaParticipante.grupo_id} onValueChange={value => {
+                                      setLojasParticipantes(prev => prev.map(l => l.loja_id === lojaParticipante.loja_id ? { ...l, grupo_id: value } : l));
+                                    }}>
+                                      <SelectTrigger className="h-8">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="1">1</SelectItem>
+                                        <SelectItem value="2">2</SelectItem>
+                                        <SelectItem value="3">3</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
                                   {novaCampanha.tipo_meta === 'quantidade' ? (
                                     <div>
                                       <Label className="text-xs">Meta Quantidade</Label>
@@ -1572,7 +1582,7 @@ export default function Campanhas() {
                 codigo_loja: parseInt(loja.numero),
                 meta_quantidade: 0,
                 meta_valor: 0,
-                grupo_id: (loja.grupo_id ?? 1).toString()
+                grupo_id: '1'
               }));
               setLojasParticipantes(todasLojas);
             }}>
@@ -1679,7 +1689,7 @@ export default function Campanhas() {
                   codigo_loja: parseInt(loja.numero),
                   meta_quantidade: 0,
                   meta_valor: 0,
-                  grupo_id: (loja.grupo_id ?? 1).toString()
+                  grupo_id: '1'
                 }]);
               }
             }}>
