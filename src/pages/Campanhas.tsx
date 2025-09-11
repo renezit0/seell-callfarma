@@ -119,7 +119,8 @@ export default function Campanhas() {
   });
   
   // Estados para status/ranking
-  const [grupoSelecionado, setGrupoSelecionado] = useState<string>('1');
+  const [campanhaStatusSelecionada, setCampanhaStatusSelecionada] = useState<number | null>(null);
+  const [campanhasStatus, setCampanhasStatus] = useState<Campanha[]>([]);
   const [lojasRanking, setLojasRanking] = useState<LojaRanking[]>([]);
   const [colaboradoresRanking, setColaboradoresRanking] = useState<ColaboradorRanking[]>([]);
   const [viewMode, setViewMode] = useState<'lojas' | 'colaboradores'>('lojas');
@@ -929,9 +930,15 @@ export default function Campanhas() {
   // Carregar dados do status quando a view mudar
   useEffect(() => {
     if (view === 'status') {
+      carregarCampanhasStatus();
+    }
+  }, [view]);
+
+  useEffect(() => {
+    if (view === 'status' && campanhaStatusSelecionada) {
       carregarDadosStatus();
     }
-  }, [view, grupoSelecionado, periodoAtual]);
+  }, [campanhaStatusSelecionada, periodoAtual]);
 
   const carregarDadosStatus = async () => {
     setLoading(true);
@@ -952,21 +959,62 @@ export default function Campanhas() {
     }
   };
 
-  const carregarRankingLojas = async () => {
+  const carregarCampanhasStatus = async () => {
     try {
-      // Buscar lojas participantes de campanhas ativas do grupo selecionado
+      const { data, error } = await supabase
+        .from('campanhas_vendas_lojas')
+        .select('*')
+        .eq('status', 'ativa')
+        .order('data_fim', { ascending: true });
+
+      if (error) throw error;
+
+      const campanhasFormatadas = (data || []).map(campanha => ({
+        id: campanha.id,
+        nome: campanha.nome || '',
+        descricao: campanha.descricao || '',
+        data_inicio: campanha.data_inicio || '',
+        data_fim: campanha.data_fim || '',
+        tipo_meta: campanha.tipo_meta as 'quantidade' | 'valor' || 'quantidade',
+        status: campanha.status as 'ativa' | 'inativa' | 'encerrada' || 'ativa',
+        sem_metas: campanha.sem_metas === '1',
+        criado_por: campanha.criado_por || 0
+      }));
+
+      setCampanhasStatus(campanhasFormatadas);
+      
+      // Selecionar a primeira campanha automaticamente
+      if (campanhasFormatadas.length > 0 && !campanhaStatusSelecionada) {
+        setCampanhaStatusSelecionada(campanhasFormatadas[0].id);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar campanhas:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar campanhas",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const carregarRankingLojas = async () => {
+    if (!campanhaStatusSelecionada) return;
+    
+    try {
+      // Buscar dados da campanha selecionada
+      const { data: campanha, error: erroCampanha } = await supabase
+        .from('campanhas_vendas_lojas')
+        .select('*')
+        .eq('id', campanhaStatusSelecionada)
+        .single();
+
+      if (erroCampanha) throw erroCampanha;
+
+      // Buscar lojas participantes da campanha
       const { data: participantes, error: participantesError } = await supabase
         .from('campanhas_vendas_lojas_participantes')
-        .select(`
-          loja_id,
-          codigo_loja,
-          grupo_id,
-          campanhas_vendas_lojas!inner(
-            status
-          )
-        `)
-        .eq('grupo_id', grupoSelecionado)
-        .eq('campanhas_vendas_lojas.status', 'ativa');
+        .select('*')
+        .eq('campanha_id', campanhaStatusSelecionada);
 
       if (participantesError) throw participantesError;
 
@@ -984,28 +1032,30 @@ export default function Campanhas() {
 
       if (lojasError) throw lojasError;
 
-      // Buscar vendas do período
-      const { data: vendas, error: vendasError } = await supabase
-        .from('vendas')
-        .select(`
-          valor_venda,
-          usuario_id,
-          usuarios!inner(
-            loja_id
-          )
-        `)
-        .gte('data_venda', periodoAtual.dataInicio.toISOString().split('T')[0])
-        .lte('data_venda', periodoAtual.dataFim.toISOString().split('T')[0])
-        .in('usuarios.loja_id', lojasIds);
+      // Buscar vendas da API externa para a campanha
+      const filtros = {
+        dataInicio: campanha.data_inicio,
+        dataFim: campanha.data_fim,
+        filtroFornecedores: campanha.fornecedores?.toString(),
+        filtroMarcas: campanha.marcas?.toString(),
+        filtroFamilias: campanha.familias?.toString(),
+        filtroGrupos: campanha.grupos_produtos?.join(','),
+        filtroProduto: campanha.produtos?.toString()
+      };
 
-      if (vendasError) throw vendasError;
+      const vendasApiExterna = await buscarVendasCampanha(filtros);
 
       const lojasComVendas: LojaRanking[] = [];
 
-      for (const loja of lojas || []) {
-        // Filtrar vendas da loja
-        const vendasLoja = vendas?.filter((v: any) => v.usuarios.loja_id === loja.id) || [];
-        const totalVendas = vendasLoja.reduce((sum: number, v: any) => sum + (v.valor_venda || 0), 0);
+      for (const participante of participantes) {
+        const loja = lojas?.find(l => l.id === participante.loja_id);
+        if (!loja) continue;
+
+        // Buscar vendas da API externa pelo código da loja
+        const vendaApiExterna = vendasApiExterna.find(v => v.CDFIL === participante.codigo_loja);
+        const totalVendas = campanha.tipo_meta === 'quantidade' 
+          ? ((vendaApiExterna?.TOTAL_QUANTIDADE || 0) - (vendaApiExterna?.TOTAL_QTD_DV || 0))
+          : ((vendaApiExterna?.TOTAL_VALOR || 0) - (vendaApiExterna?.TOTAL_VLR_DV || 0));
 
         // Buscar total de colaboradores da loja
         const { count: totalColaboradores } = await supabase
@@ -1022,7 +1072,7 @@ export default function Campanhas() {
           id: loja.id,
           numero: loja.numero,
           nome: loja.nome,
-          grupo_id: grupoSelecionado,
+          grupo_id: participante.grupo_id || '1',
           totalVendas,
           totalColaboradores: totalColaboradores || 0,
           mediaVendasPorColaborador,
@@ -1046,20 +1096,23 @@ export default function Campanhas() {
   };
 
   const carregarRankingColaboradores = async () => {
+    if (!campanhaStatusSelecionada) return;
+    
     try {
-      // Buscar lojas participantes de campanhas ativas do grupo selecionado
+      // Buscar dados da campanha selecionada
+      const { data: campanha, error: erroCampanha } = await supabase
+        .from('campanhas_vendas_lojas')
+        .select('*')
+        .eq('id', campanhaStatusSelecionada)
+        .single();
+
+      if (erroCampanha) throw erroCampanha;
+
+      // Buscar lojas participantes da campanha
       const { data: participantes, error: participantesError } = await supabase
         .from('campanhas_vendas_lojas_participantes')
-        .select(`
-          loja_id,
-          codigo_loja,
-          grupo_id,
-          campanhas_vendas_lojas!inner(
-            status
-          )
-        `)
-        .eq('grupo_id', grupoSelecionado)
-        .eq('campanhas_vendas_lojas.status', 'ativa');
+        .select('*')
+        .eq('campanha_id', campanhaStatusSelecionada);
 
       if (participantesError) throw participantesError;
 
@@ -1077,9 +1130,25 @@ export default function Campanhas() {
 
       if (lojasError) throw lojasError;
 
+      // Buscar vendas da API externa para a campanha
+      const filtros = {
+        dataInicio: campanha.data_inicio,
+        dataFim: campanha.data_fim,
+        filtroFornecedores: campanha.fornecedores?.toString(),
+        filtroMarcas: campanha.marcas?.toString(),
+        filtroFamilias: campanha.familias?.toString(),
+        filtroGrupos: campanha.grupos_produtos?.join(','),
+        filtroProduto: campanha.produtos?.toString()
+      };
+
+      const vendasApiExterna = await buscarVendasCampanha(filtros);
+
       const colaboradoresComVendas: ColaboradorRanking[] = [];
 
-      for (const loja of lojas || []) {
+      for (const participante of participantes) {
+        const loja = lojas?.find(l => l.id === participante.loja_id);
+        if (!loja) continue;
+
         // Buscar colaboradores da loja
         const { data: colaboradores, error: colaboradoresError } = await supabase
           .from('usuarios')
@@ -1089,26 +1158,24 @@ export default function Campanhas() {
 
         if (colaboradoresError) continue;
 
+        // Buscar vendas da API externa pelo código da loja
+        const vendaApiExterna = vendasApiExterna.find(v => v.CDFIL === participante.codigo_loja);
+        const totalVendasLoja = campanha.tipo_meta === 'quantidade' 
+          ? ((vendaApiExterna?.TOTAL_QUANTIDADE || 0) - (vendaApiExterna?.TOTAL_QTD_DV || 0))
+          : ((vendaApiExterna?.TOTAL_VALOR || 0) - (vendaApiExterna?.TOTAL_VLR_DV || 0));
+
+        // Distribuir vendas igualmente entre colaboradores (simplificação)
+        const totalColaboradores = colaboradores?.length || 1;
+        const vendasPorColaborador = totalVendasLoja / totalColaboradores;
+
         for (const colaborador of colaboradores || []) {
-          // Buscar vendas do colaborador no período
-          const { data: vendas, error: vendasError } = await supabase
-            .from('vendas')
-            .select('valor_venda')
-            .eq('usuario_id', colaborador.id)
-            .gte('data_venda', periodoAtual.dataInicio.toISOString().split('T')[0])
-            .lte('data_venda', periodoAtual.dataFim.toISOString().split('T')[0]);
-
-          if (vendasError) continue;
-
-          const totalVendas = vendas?.reduce((sum, v) => sum + (v.valor_venda || 0), 0) || 0;
-
-          if (totalVendas > 0) {
+          if (vendasPorColaborador > 0) {
             colaboradoresComVendas.push({
               id: colaborador.id,
               nome: colaborador.nome,
               loja_id: loja.id,
               loja_nome: loja.nome,
-              totalVendas,
+              totalVendas: vendasPorColaborador,
               posicao: 0
             });
           }
@@ -1164,9 +1231,11 @@ export default function Campanhas() {
             Status e Rankings
           </h1>
         </div>
-        <Badge variant="outline" className="text-sm">
-          {periodoAtual.dataInicio.toLocaleDateString('pt-BR')} - {periodoAtual.dataFim.toLocaleDateString('pt-BR')}
-        </Badge>
+        {campanhaStatusSelecionada && (
+          <Badge variant="outline" className="text-sm">
+            {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.nome}
+          </Badge>
+        )}
       </div>
 
       {/* Filtros */}
@@ -1177,18 +1246,20 @@ export default function Campanhas() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Grupo</label>
+              <label className="text-sm font-medium">Campanha</label>
               <Select 
-                value={grupoSelecionado} 
-                onValueChange={(value) => setGrupoSelecionado(value)}
+                value={campanhaStatusSelecionada?.toString() || ''} 
+                onValueChange={(value) => setCampanhaStatusSelecionada(parseInt(value))}
               >
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Selecione uma campanha" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Grupo 1</SelectItem>
-                  <SelectItem value="2">Grupo 2</SelectItem>
-                  <SelectItem value="3">Grupo 3</SelectItem>
+                <SelectContent className="bg-background border z-50">
+                  {campanhasStatus.map((campanha) => (
+                    <SelectItem key={campanha.id} value={campanha.id.toString()}>
+                      {campanha.nome}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -1235,7 +1306,9 @@ export default function Campanhas() {
           <TabsContent value="lojas" className="space-y-4">
             <div className="grid gap-4">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold">Grupo {grupoSelecionado} - Ranking de Lojas</h2>
+                <h2 className="text-xl font-semibold">
+                  {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.nome} - Ranking de Lojas
+                </h2>
                 <Badge variant="secondary">{lojasRanking.length} lojas</Badge>
               </div>
               {lojasRanking.length === 0 ? (
@@ -1280,7 +1353,9 @@ export default function Campanhas() {
           <TabsContent value="colaboradores" className="space-y-4">
             <div className="grid gap-4">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold">Grupo {grupoSelecionado} - Ranking de Colaboradores</h2>
+                <h2 className="text-xl font-semibold">
+                  {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.nome} - Ranking de Colaboradores
+                </h2>
                 <Badge variant="secondary">{colaboradoresRanking.length} colaboradores</Badge>
               </div>
               {colaboradoresRanking.length === 0 ? (
