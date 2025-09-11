@@ -899,13 +899,16 @@ export const useCallfarmaAPI = () => {
       const params: any = {
         dataFim: filtros.dataFim,
         dataIni: filtros.dataInicio,
+        groupBy: 'scefun.CDFUN,scefilial.CDFIL', // Agrupar por colaborador e loja
         orderBy: 'TOTAL_VLR_VE desc'
       };
 
-      // Adicionar filtro de produtos se especificado
-      if (filtros.filtroProduto) {
-        params.filtroProduto = filtros.filtroProduto;
-      }
+      // Filtros da campanha (principalmente produtos no caso Biolab)
+      if (filtros.filtroProduto) params.filtroProduto = filtros.filtroProduto;
+      if (filtros.filtroFornecedores) params.filtroFornecedores = filtros.filtroFornecedores;
+      if (filtros.filtroMarcas) params.filtroMarcas = filtros.filtroMarcas;
+      if (filtros.filtroFamilias) params.filtroFamilias = filtros.filtroFamilias;
+      if (filtros.filtroGrupos) params.filtroGrupos = filtros.filtroGrupos;
 
       const { data, error } = await supabase.functions.invoke('callfarma-vendas', {
         body: {

@@ -1153,40 +1153,34 @@ export default function Campanhas() {
 
   const carregarRankingColaboradores = async () => {
     if (!campanhaStatusSelecionada) return;
-    
     try {
-      // Buscar dados da campanha selecionada
+      // 1) Dados da campanha e participantes
       const { data: campanha, error: erroCampanha } = await supabase
         .from('campanhas_vendas_lojas')
         .select('*')
         .eq('id', campanhaStatusSelecionada)
         .single();
-
       if (erroCampanha) throw erroCampanha;
 
-      // Buscar lojas participantes da campanha
       const { data: participantes, error: participantesError } = await supabase
         .from('campanhas_vendas_lojas_participantes')
         .select('*')
         .eq('campanha_id', campanhaStatusSelecionada);
-
       if (participantesError) throw participantesError;
-
       if (!participantes || participantes.length === 0) {
         setGruposRanking([]);
         return;
       }
 
-      // Buscar dados das lojas
+      // 2) Buscar lojas para nomes e números
       const lojasIds = participantes.map(p => p.loja_id);
       const { data: lojas, error: lojasError } = await supabase
         .from('lojas')
         .select('*')
         .in('id', lojasIds);
-
       if (lojasError) throw lojasError;
 
-      // Buscar vendas da API externa para a campanha usando o período completo
+      // 3) Buscar vendas por COLABORADOR na API externa, filtrando por produtos
       const filtros = {
         dataInicio: campanha.data_inicio,
         dataFim: campanha.data_fim,
@@ -1196,116 +1190,57 @@ export default function Campanhas() {
         filtroGrupos: campanha.grupos_produtos?.join(','),
         filtroProduto: campanha.produtos?.toString()
       };
+      const vendasColaboradores = await buscarVendasCampanhaDetalhada(filtros);
 
-      const vendasApiExterna = await buscarVendasCampanha(filtros);
-
+      // 4) Montar ranking por colaborador dentro do grupo da loja
       const colaboradoresComVendas: ColaboradorRanking[] = [];
+      for (const item of vendasColaboradores) {
+        const participante = participantes.find(p => p.codigo_loja === item.CDFIL);
+        if (!participante) continue; // ignorar lojas fora da campanha
 
-      for (const participante of participantes) {
         const loja = lojas?.find(l => l.id === participante.loja_id);
-        if (!loja) continue;
+        const vendas = (campanha.tipo_meta === 'quantidade')
+          ? (Number(item.TOTAL_QTD_VE || 0) - Number(item.TOTAL_QTD_DV || 0))
+          : (Number(item.TOTAL_VLR_VE || 0) - Number(item.TOTAL_VLR_DV || 0));
+        if (vendas <= 0) continue;
 
-        // Buscar colaboradores da loja
-        const { data: colaboradores, error: colaboradoresError } = await supabase
-          .from('usuarios')
-          .select('*')
-          .eq('loja_id', loja.id)
-          .neq('tipo', 'admin');
-
-        if (colaboradoresError) continue;
-
-      // Buscar vendas da API externa para a campanha usando o período completo
-      const filtros = {
-        dataInicio: campanha.data_inicio,
-        dataFim: campanha.data_fim,
-        filtroFornecedores: campanha.fornecedores?.toString(),
-        filtroMarcas: campanha.marcas?.toString(),
-        filtroFamilias: campanha.familias?.toString(),
-        filtroGrupos: campanha.grupos_produtos?.join(','),
-        filtroProduto: campanha.produtos?.toString()
-      };
-
-      const vendasApiExterna = await buscarVendasCampanha(filtros);
-
-      const colaboradoresComVendas: ColaboradorRanking[] = [];
-
-      for (const participante of participantes) {
-        const loja = lojas?.find(l => l.id === participante.loja_id);
-        if (!loja) continue;
-
-        // Buscar colaboradores da loja
-        const { data: colaboradores, error: colaboradoresError } = await supabase
-          .from('usuarios')
-          .select('*')
-          .eq('loja_id', loja.id)
-          .neq('tipo', 'admin');
-
-        if (colaboradoresError) continue;
-
-        // Buscar vendas da API externa pelo código da loja
-        const vendaApiExterna = vendasApiExterna.find(v => v.CDFIL === participante.codigo_loja);
-        const totalVendasLoja = campanha.tipo_meta === 'quantidade' 
-          ? ((vendaApiExterna?.TOTAL_QUANTIDADE || 0) - (vendaApiExterna?.TOTAL_QTD_DV || 0))
-          : ((vendaApiExterna?.TOTAL_VALOR || 0) - (vendaApiExterna?.TOTAL_VLR_DV || 0));
-
-        // Distribuir vendas igualmente entre colaboradores (simplificação)
-        const totalColaboradores = colaboradores?.length || 1;
-        const vendasPorColaborador = totalVendasLoja / totalColaboradores;
-
-        for (const colaborador of colaboradores || []) {
-          if (vendasPorColaborador > 0) {
-            colaboradoresComVendas.push({
-              id: colaborador.id,
-              nome: colaborador.nome,
-              loja_id: loja.id,
-              loja_nome: loja.nome,
-              grupo_id: participante.grupo_id || '1',
-              totalVendas: vendasPorColaborador,
-              posicao: 0
-            });
-          }
-        }
-      }
+        colaboradoresComVendas.push({
+          id: Number(item.CDFUN) || 0,
+          nome: item.NOMEFUN || 'Colaborador',
+          loja_id: participante.loja_id || 0,
+          loja_nome: loja?.nome || item.NOMEFIL || 'Loja',
+          grupo_id: String(participante.grupo_id || '1'),
+          totalVendas: vendas,
+          posicao: 0
+        });
       }
 
-      // Agrupar colaboradores por grupo de loja
+      // 5) Agrupar por grupo e ordenar por vendas
       const gruposMap = new Map<string, ColaboradorRanking[]>();
-      colaboradoresComVendas.forEach(colaborador => {
-        if (!gruposMap.has(colaborador.grupo_id)) {
-          gruposMap.set(colaborador.grupo_id, []);
-        }
-        gruposMap.get(colaborador.grupo_id)!.push(colaborador);
+      colaboradoresComVendas.forEach(c => {
+        if (!gruposMap.has(c.grupo_id)) gruposMap.set(c.grupo_id, []);
+        gruposMap.get(c.grupo_id)!.push(c);
       });
 
       const grupos: GrupoRanking[] = [];
-      gruposMap.forEach((colaboradoresGrupo, grupoId) => {
-        // Ordenar colaboradores do grupo por vendas
-        colaboradoresGrupo.sort((a, b) => b.totalVendas - a.totalVendas);
-        
-        // Adicionar posições dentro do grupo
-        const colaboradoresComPosicoes = colaboradoresGrupo.map((colaborador, index) => ({
-          ...colaborador,
-          posicao: index + 1
-        }));
-
-        const totalVendasGrupo = colaboradoresGrupo.reduce((sum, col) => sum + col.totalVendas, 0);
-
+      gruposMap.forEach((cols, grupoId) => {
+        cols.sort((a, b) => b.totalVendas - a.totalVendas);
+        const colsComPosicao = cols.map((c, i) => ({ ...c, posicao: i + 1 }));
+        const totalVendasGrupo = cols.reduce((sum, c) => sum + c.totalVendas, 0);
         grupos.push({
           grupo_id: grupoId,
           nome_grupo: `Grupo ${grupoId}`,
           lojas: [],
-          colaboradores: colaboradoresComPosicoes,
+          colaboradores: colsComPosicao,
           totalVendas: totalVendasGrupo,
-          totalMeta: 0, // Colaboradores não têm meta
-          percentualAtingimentoGrupo: 0, // Não aplicável para colaboradores
+          totalMeta: 0,
+          percentualAtingimentoGrupo: 0,
           totalLojas: 0,
-          totalColaboradores: colaboradoresGrupo.length
+          totalColaboradores: cols.length
         });
       });
 
-      // Ordenar grupos por total de vendas
       grupos.sort((a, b) => b.totalVendas - a.totalVendas);
-
       setGruposRanking(grupos);
     } catch (error) {
       console.error('Erro ao carregar ranking de colaboradores:', error);
