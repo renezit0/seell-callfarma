@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="40" viewBox="0 0 120 40">
+  <defs>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ffd400;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff9800;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="120" height="40" fill="#1a1a1a" rx="8"/>
+  <text x="60" y="25" font-family="Quicksand, sans-serif" font-size="18" font-weight="700" text-anchor="middle" fill="url(#goldGradient)">seeLL</text>
+</svg>
