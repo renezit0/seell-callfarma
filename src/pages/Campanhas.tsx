@@ -333,7 +333,7 @@ export default function Campanhas() {
       loja_id: loja.id,
       codigo_loja: parseInt(loja.numero),
       meta_quantidade: parseInt(formRapido.metaQuantidade) || 0,
-      meta_valor: parseFloat(formRapido.metaValor) || 0,
+      meta_valor: parseFloat((formRapido.metaValor || '0').replace(',', '.')) || 0,
       grupo_id: formRapido.grupo
     };
     setLojasParticipantes(prev => [...prev, novaLoja]);
@@ -1276,10 +1276,10 @@ export default function Campanhas() {
 
                 <div className="space-y-2">
                   <Label htmlFor="metaValor">Meta Valor (R$)</Label>
-                  <Input id="metaValor" type="number" step="0.01" value={formRapido.metaValor} onChange={e => setFormRapido(prev => ({
+                  <Input id="metaValor" type="text" inputMode="decimal" value={formRapido.metaValor} onChange={e => setFormRapido(prev => ({
                   ...prev,
                   metaValor: e.target.value
-                }))} placeholder="0.00" min="0" />
+                }))} placeholder="0,00" />
                 </div>
 
                 <div className="flex gap-2">
@@ -1373,7 +1373,7 @@ export default function Campanhas() {
                         </div>
                         <div>
                           <Label className="text-xs">Meta Valor</Label>
-                          <Input type="number" placeholder="0.00" className="h-8" value={lojaParticipante.meta_valor} onChange={e => atualizarMetaLoja(lojaParticipante.loja_id, 'meta_valor', parseFloat(e.target.value) || 0)} />
+                          <Input type="text" inputMode="decimal" placeholder="0,00" className="h-8" value={lojaParticipante.meta_valor} onChange={e => atualizarMetaLoja(lojaParticipante.loja_id, 'meta_valor', parseFloat(e.target.value.replace(',', '.')) || 0)} />
                         </div>
                       </div>
                     </div>;
@@ -1562,9 +1562,10 @@ export default function Campanhas() {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Meta Valor (R$)</Label>
-                          <Input type="number" value={loja.meta_valor} onChange={e => {
+                          <Input type="text" inputMode="decimal" value={loja.meta_valor} onChange={e => {
                       const novasLojas = [...lojasParticipantes];
-                      novasLojas[index].meta_valor = parseFloat(e.target.value) || 0;
+                      const valor = parseFloat(e.target.value.replace(',', '.')) || 0;
+                      novasLojas[index].meta_valor = valor;
                       setLojasParticipantes(novasLojas);
                     }} className="h-8" />
                         </div>
