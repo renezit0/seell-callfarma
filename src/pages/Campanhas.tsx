@@ -242,7 +242,7 @@ export default function Campanhas() {
       setLoading(false);
     }
   };
-  const carregarLojasDisponiveis = async () => {
+  const carregarLojasDisponiveis = async (preselecionar: boolean = true) => {
     setLoadingLojas(true);
     try {
       const {
@@ -255,15 +255,17 @@ export default function Campanhas() {
       const lojasFiltered = (data || []).filter(loja => loja.nome.toLowerCase() !== 'outras' && loja.nome.toLowerCase() !== 'outro' && loja.numero !== '999');
       setLojasDisponiveis(lojasFiltered);
 
-      // Pré-selecionar todas as lojas automaticamente (exceto "outras")
-      const lojasPreSelecionadas = lojasFiltered.map(loja => ({
-        loja_id: loja.id,
-        codigo_loja: parseInt(loja.numero),
-        meta_quantidade: 0,
-        meta_valor: 0,
-        grupo_id: '1' // Grupo padrão das lojas participantes
-      }));
-      setLojasParticipantes(lojasPreSelecionadas);
+      // Pré-selecionar todas as lojas automaticamente (exceto "outras") somente quando indicado
+      if (preselecionar) {
+        const lojasPreSelecionadas = lojasFiltered.map(loja => ({
+          loja_id: loja.id,
+          codigo_loja: parseInt(loja.numero),
+          meta_quantidade: 0,
+          meta_valor: 0,
+          grupo_id: '1' // Grupo padrão das lojas participantes
+        }));
+        setLojasParticipantes(lojasPreSelecionadas);
+      }
     } catch (error) {
       toast({
         title: "Erro",
@@ -443,7 +445,7 @@ export default function Campanhas() {
         meta_valor: loja.meta_valor,
         realizado_quantidade: 0,
         realizado_valor: 0,
-        grupo_id: loja.grupo_id.toString(),
+        grupo_id: Number(loja.grupo_id),
         status: 'ativa'
       }));
       const {
@@ -498,18 +500,11 @@ export default function Campanhas() {
         .select('*')
         .eq('campanha_id', campanha.id);
       if (erroParticipantes) throw erroParticipantes;
-
-      // Buscar grupos das lojas para preencher corretamente quando o participante não tiver grupo_id
-      const lojasIds = (participantes || []).map(p => p.loja_id).filter(Boolean) as number[];
-      const { data: lojasGrupos } = await supabase
-        .from('lojas')
-        .select('id, grupo_id')
-        .in('id', lojasIds);
-      const lojasMap = new Map<number, { grupo_id?: number }>((lojasGrupos || []).map(l => [l.id as number, { grupo_id: (l as any).grupo_id }]));
-
+      // Não buscar grupo em lojas; usar apenas grupo_id do participante
+      const lojasMap = new Map<number, { grupo_id?: number }>();
       // Mapear participantes para o formato esperado (grupo_id vindo do participante ou da loja)
       const lojasParticipantesFormatadas = (participantes || []).map(p => {
-        const rawGrupo = (p.grupo_id as any) ?? lojasMap.get(p.loja_id as number)?.grupo_id ?? 1;
+        const rawGrupo = (p.grupo_id as any) ?? 1;
         const normalizedGrupo = String(rawGrupo).replace(/\D/g, '') || '1';
         return {
           loja_id: p.loja_id,
@@ -535,7 +530,7 @@ export default function Campanhas() {
         produtos: campanhaCompleta.produtos || ''
       });
       setLojasParticipantes(lojasParticipantesFormatadas);
-      await carregarLojasDisponiveis();
+      await carregarLojasDisponiveis(false);
       setView('editar');
     } catch (error) {
       console.error('Erro ao carregar campanha para edição:', error);
@@ -602,7 +597,7 @@ export default function Campanhas() {
         meta_valor: loja.meta_valor,
         realizado_quantidade: 0,
         realizado_valor: 0,
-        grupo_id: loja.grupo_id.toString(),
+        grupo_id: Number(loja.grupo_id),
         status: 'ativa'
       }));
       const {
