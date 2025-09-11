@@ -34,6 +34,7 @@ export interface FiltroCampanha {
   filtroMarcas?: string;
   filtroFamilias?: string;
   filtroGrupos?: string;
+  filtroProduto?: string;
 }
 
 // Mapeamento dos grupos por categoria conforme API Callfarma
@@ -279,6 +280,9 @@ export const useCallfarmaAPI = () => {
       }
       if (filtros.filtroGrupos) {
         params.filtroGrupos = filtros.filtroGrupos;
+      }
+      if (filtros.filtroProduto) {
+        params.filtroProduto = filtros.filtroProduto;
       }
 
       const { data, error } = await supabase.functions.invoke('callfarma-vendas', {
