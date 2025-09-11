@@ -121,13 +121,11 @@ export default function Campanhas() {
     data_inicio: '',
     data_fim: '',
     tipo_meta: 'quantidade',
-    grupo_campanha: '1',
-    // Grupo padrão da campanha
     fornecedores: '',
     marcas: '',
     familias: '',
     grupos_produtos: '',
-    produtos: '' // Novo campo para produtos específicos
+    produtos: '' // Campo para produtos específicos
   });
   const [lojasDisponiveis, setLojasDisponiveis] = useState<any[]>([]);
   const [lojasParticipantes, setLojasParticipantes] = useState<{
@@ -263,7 +261,7 @@ export default function Campanhas() {
         codigo_loja: parseInt(loja.numero),
         meta_quantidade: 0,
         meta_valor: 0,
-        grupo_id: novaCampanha.grupo_campanha
+        grupo_id: '1' // Grupo padrão das lojas participantes
       }));
       setLojasParticipantes(lojasPreSelecionadas);
     } catch (error) {
@@ -290,7 +288,7 @@ export default function Campanhas() {
       codigo_loja: parseInt(loja.numero),
       meta_quantidade: 0,
       meta_valor: 0,
-      grupo_id: novaCampanha.grupo_campanha // Usar o grupo selecionado da campanha
+      grupo_id: '1' // Grupo padrão das lojas participantes
     }]);
   };
   const removerLoja = (lojaId: number) => {
@@ -464,7 +462,6 @@ export default function Campanhas() {
         data_inicio: '',
         data_fim: '',
         tipo_meta: 'quantidade',
-        grupo_campanha: '1',
         fornecedores: '',
         marcas: '',
         familias: '',
@@ -519,8 +516,6 @@ export default function Campanhas() {
         data_inicio: campanhaCompleta.data_inicio || '',
         data_fim: campanhaCompleta.data_fim || '',
         tipo_meta: campanhaCompleta.tipo_meta || 'quantidade',
-        grupo_campanha: '1',
-        // usar grupo padrão por agora
         fornecedores: campanhaCompleta.fornecedores?.toString() || '',
         marcas: campanhaCompleta.marcas?.toString() || '',
         familias: campanhaCompleta.familias?.toString() || '',
@@ -1146,22 +1141,6 @@ export default function Campanhas() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="grupo_campanha">Grupo da Campanha</Label>
-              <Select value={novaCampanha.grupo_campanha} onValueChange={value => setNovaCampanha(prev => ({
-              ...prev,
-              grupo_campanha: value
-            }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Grupo 1</SelectItem>
-                  <SelectItem value="2">Grupo 2</SelectItem>
-                  <SelectItem value="3">Grupo 3</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="data_inicio">Data de Início *</Label>
               <Input id="data_inicio" type="date" value={novaCampanha.data_inicio} onChange={e => setNovaCampanha(prev => ({
               ...prev,
@@ -1189,37 +1168,37 @@ export default function Campanhas() {
             <h3 className="text-lg font-semibold">Filtros de Produtos</h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="fornecedores">Fornecedores (IDs separados por vírgula)</Label>
-                <Input id="fornecedores" placeholder="Ex: 1998, 2001, 2005" value={novaCampanha.fornecedores} onChange={e => setNovaCampanha(prev => ({
+                <Label htmlFor="fornecedores">Fornecedores (texto livre)</Label>
+                <Input id="fornecedores" placeholder="Ex: Farmácia Popular, Droga Raia, Drogasil..." value={novaCampanha.fornecedores} onChange={e => setNovaCampanha(prev => ({
                 ...prev,
                 fornecedores: e.target.value
               }))} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="marcas">Marcas (IDs separados por vírgula)</Label>
-                <Input id="marcas" placeholder="Ex: 101, 102, 103" value={novaCampanha.marcas} onChange={e => setNovaCampanha(prev => ({
+                <Label htmlFor="marcas">Marcas (texto livre)</Label>
+                <Input id="marcas" placeholder="Ex: Aspirina, Tylenol, Dipirona..." value={novaCampanha.marcas} onChange={e => setNovaCampanha(prev => ({
                 ...prev,
                 marcas: e.target.value
               }))} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="grupos">Grupos (IDs separados por vírgula)</Label>
-                <Input id="grupos" placeholder="Ex: 20, 25, 21" value={novaCampanha.grupos_produtos} onChange={e => setNovaCampanha(prev => ({
+                <Label htmlFor="grupos">Grupos de Produtos (texto livre)</Label>
+                <Input id="grupos" placeholder="Ex: Analgésicos, Antibióticos, Vitaminas..." value={novaCampanha.grupos_produtos} onChange={e => setNovaCampanha(prev => ({
                 ...prev,
                 grupos_produtos: e.target.value
               }))} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="familias">Famílias (IDs separados por vírgula)</Label>
-                <Input id="familias" placeholder="Ex: 2017, 2018, 2019" value={novaCampanha.familias} onChange={e => setNovaCampanha(prev => ({
+                <Label htmlFor="familias">Famílias (texto livre)</Label>
+                <Input id="familias" placeholder="Ex: Medicamentos, Cosméticos, Higiene..." value={novaCampanha.familias} onChange={e => setNovaCampanha(prev => ({
                 ...prev,
                 familias: e.target.value
               }))} />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="produtos">Produtos Específicos (Códigos separados por vírgula)</Label>
-              <Textarea id="produtos" placeholder="Ex: 23319, 52682, 58033, 60423, 60424, 60425..." value={novaCampanha.produtos} onChange={e => setNovaCampanha(prev => ({
+              <Label htmlFor="produtos">Produtos Específicos (texto livre)</Label>
+              <Textarea id="produtos" placeholder="Ex: Aspirina 500mg, Dipirona Gotas, Vitamina C..." value={novaCampanha.produtos} onChange={e => setNovaCampanha(prev => ({
               ...prev,
               produtos: e.target.value
             }))} rows={3} />
@@ -1346,7 +1325,7 @@ export default function Campanhas() {
                   codigo_loja: parseInt(loja.numero),
                   meta_quantidade: 0,
                   meta_valor: 0,
-                  grupo_id: novaCampanha.grupo_campanha
+                  grupo_id: '1' // Grupo padrão, será ajustado conforme a loja
                 }));
                 setLojasParticipantes(todasLojas);
               }}>
@@ -1488,21 +1467,49 @@ export default function Campanhas() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="editGrupoCampanha">Grupo da Campanha</Label>
-              <Select value={campanhaEditando.grupo_campanha} onValueChange={value => setCampanhaEditando(prev => ({
-              ...prev,
-              grupo_campanha: value
-            }))}>
-                <SelectTrigger className="bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-background border z-50">
-                  <SelectItem value="1">Grupo 1</SelectItem>
-                  <SelectItem value="2">Grupo 2</SelectItem>
-                  <SelectItem value="3">Grupo 3</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Seção de Filtros de Produtos */}
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="text-lg font-semibold">Filtros de Produtos</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="editFornecedores">Fornecedores (texto livre)</Label>
+                  <Input id="editFornecedores" placeholder="Ex: Farmácia Popular, Droga Raia, Drogasil..." value={campanhaEditando.fornecedores} onChange={e => setCampanhaEditando(prev => ({
+                  ...prev,
+                  fornecedores: e.target.value
+                }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editMarcas">Marcas (texto livre)</Label>
+                  <Input id="editMarcas" placeholder="Ex: Aspirina, Tylenol, Dipirona..." value={campanhaEditando.marcas} onChange={e => setCampanhaEditando(prev => ({
+                  ...prev,
+                  marcas: e.target.value
+                }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editGrupos">Grupos de Produtos (texto livre)</Label>
+                  <Input id="editGrupos" placeholder="Ex: Analgésicos, Antibióticos, Vitaminas..." value={campanhaEditando.grupos_produtos} onChange={e => setCampanhaEditando(prev => ({
+                  ...prev,
+                  grupos_produtos: e.target.value
+                }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editFamilias">Famílias (texto livre)</Label>
+                  <Input id="editFamilias" placeholder="Ex: Medicamentos, Cosméticos, Higiene..." value={campanhaEditando.familias} onChange={e => setCampanhaEditando(prev => ({
+                  ...prev,
+                  familias: e.target.value
+                }))} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editProdutos">Produtos Específicos (texto livre)</Label>
+                <Textarea id="editProdutos" placeholder="Ex: Aspirina 500mg, Dipirona Gotas, Vitamina C..." value={campanhaEditando.produtos} onChange={e => setCampanhaEditando(prev => ({
+                ...prev,
+                produtos: e.target.value
+              }))} rows={3} />
+                <p className="text-sm text-muted-foreground">
+                  Deixe em branco para usar apenas os filtros acima (fornecedores, marcas, grupos, famílias)
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -1524,7 +1531,7 @@ export default function Campanhas() {
                 codigo_loja: parseInt(loja.numero),
                 meta_quantidade: 0,
                 meta_valor: 0,
-                grupo_id: campanhaEditando.grupo_campanha || '1'
+                grupo_id: '1' // Grupo padrão, será ajustado conforme a loja
               }));
               setLojasParticipantes(todasLojas);
             }}>
@@ -1584,7 +1591,7 @@ export default function Campanhas() {
                   codigo_loja: parseInt(loja.numero),
                   meta_quantidade: 0,
                   meta_valor: 0,
-                  grupo_id: campanhaEditando.grupo_campanha || '1'
+                  grupo_id: '1' // Grupo padrão, será ajustado conforme a loja
                 }]);
               }
             }}>
