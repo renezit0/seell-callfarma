@@ -37,7 +37,8 @@ export function useDashboardData(user: User | null, selectedPeriod?: PeriodOptio
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('🔍 useDashboardData - user:', user?.nome, 'selectedPeriod:', selectedPeriod?.label, 'selectedLojaId:', selectedLojaId);
+    console.log('🔍 DASHBOARD DATA - Iniciando...');
+    console.log('🔍 useDashboardData - user:', user?.nome, 'user.loja_id:', user?.loja_id, 'selectedPeriod:', selectedPeriod?.label, 'selectedLojaId:', selectedLojaId);
     
     if (!user || !selectedPeriod) {
       console.log('❌ Dados insuficientes - user:', !!user, 'selectedPeriod:', !!selectedPeriod);
@@ -47,7 +48,7 @@ export function useDashboardData(user: User | null, selectedPeriod?: PeriodOptio
 
     // Usar selectedLojaId se fornecido, senão usar loja do usuário
     const currentLojaId = selectedLojaId || user.loja_id;
-    console.log('🏪 Loja atual:', currentLojaId);
+    console.log('🏪 LOJA SENDO USADA PARA FILTRAR:', currentLojaId, 'selectedLojaId:', selectedLojaId, 'user.loja_id:', user.loja_id);
 
     const fetchDashboardData = async () => {
       try {
@@ -55,15 +56,17 @@ export function useDashboardData(user: User | null, selectedPeriod?: PeriodOptio
         console.log('🚀 Iniciando busca de dados do dashboard...');
         
         // Buscar metas da loja atual para o período selecionado
+        console.log('📊 Buscando metas para loja_id:', currentLojaId, 'periodo_meta_id:', selectedPeriod.id);
         const { data: metasLoja, error: errorMetas } = await supabase
           .from('metas_loja')
           .select('*, metas_loja_categorias(*)')
           .eq('loja_id', currentLojaId)
           .eq('periodo_meta_id', selectedPeriod.id);
 
-        console.log('📊 Metas encontradas:', metasLoja?.length, errorMetas ? 'ERRO:' + errorMetas.message : '');
+        console.log('📊 Metas encontradas:', metasLoja?.length, 'para loja_id:', currentLojaId, errorMetas ? 'ERRO:' + errorMetas.message : '', metasLoja);
 
         // Buscar vendas da loja atual no período selecionado
+        console.log('💰 Buscando vendas_loja para loja_id:', currentLojaId, 'período:', selectedPeriod.startDate.toISOString().split('T')[0], 'até', selectedPeriod.endDate.toISOString().split('T')[0]);
         const { data: vendasLoja, error: errorVendas } = await supabase
           .from('vendas_loja')
           .select('*')
@@ -71,7 +74,7 @@ export function useDashboardData(user: User | null, selectedPeriod?: PeriodOptio
           .gte('data_venda', selectedPeriod.startDate.toISOString().split('T')[0])
           .lte('data_venda', selectedPeriod.endDate.toISOString().split('T')[0]);
 
-        console.log('💰 Vendas período encontradas:', vendasLoja?.length, errorVendas ? 'ERRO:' + errorVendas.message : '');
+        console.log('💰 Vendas período encontradas:', vendasLoja?.length, 'para loja_id:', currentLojaId, errorVendas ? 'ERRO:' + errorVendas.message : '', 'primeiros 3:', vendasLoja?.slice(0, 3));
 
         // Buscar vendas até ontem (para cálculo da meta diária) - considerando fuso horário de Brasília
         const agora = new Date();
