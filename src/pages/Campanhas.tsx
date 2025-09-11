@@ -158,7 +158,7 @@ export default function Campanhas() {
   const buscarCampanhas = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('campanhas_vendas_lojas').select('*');
+      let query = (supabase as any).from('campanhas_vendas_loja').select('*');
       if (!incluirInativas) {
         query = query.eq('status', 'ativa');
       }
@@ -316,8 +316,8 @@ export default function Campanhas() {
     setCriandoCampanha(true);
     try {
       // Criar campanha
-      const { data: campanhaCriada, error: erroCampanha } = await supabase
-        .from('campanhas_vendas_lojas')
+      const { data: campanhaCriada, error: erroCampanha } = await (supabase as any)
+        .from('campanhas_vendas_loja')
         .insert([{
           data_inicio: novaCampanha.data_inicio,
           data_fim: novaCampanha.data_fim,
@@ -449,7 +449,7 @@ export default function Campanhas() {
       const {
         data: campanha,
         error: erroCampanha
-      } = await supabase.from('campanhas_vendas_lojas').select('*').eq('id', campanhaId).single();
+      } = await (supabase as any).from('campanhas_vendas_loja').select('*').eq('id', campanhaId).single();
       if (erroCampanha) throw erroCampanha;
 
       // Buscar lojas participantes de campanhas_vendas_lojas_participantes
@@ -1157,7 +1157,7 @@ export default function Campanhas() {
       const {
         data,
         error
-      } = await supabase.from('campanhas_vendas_lojas').select('*').eq('status', 'ativa').order('data_fim', {
+      } = await (supabase as any).from('campanhas_vendas_loja').select('*').eq('status', 'ativa').order('data_fim', {
         ascending: true
       });
       if (error) throw error;
@@ -1194,7 +1194,7 @@ export default function Campanhas() {
       const {
         data: campanha,
         error: erroCampanha
-      } = await supabase.from('campanhas_vendas_lojas').select('*').eq('id', campanhaStatusSelecionada).single();
+      } = await (supabase as any).from('campanhas_vendas_loja').select('*').eq('id', campanhaStatusSelecionada).single();
       if (erroCampanha) throw erroCampanha;
 
       // Buscar lojas participantes da campanha
@@ -1311,7 +1311,7 @@ export default function Campanhas() {
       const {
         data: campanha,
         error: erroCampanha
-      } = await supabase.from('campanhas_vendas_lojas').select('*').eq('id', campanhaStatusSelecionada).single();
+      } = await (supabase as any).from('campanhas_vendas_loja').select('*').eq('id', campanhaStatusSelecionada).single();
       if (erroCampanha) throw erroCampanha;
       const {
         data: participantes,

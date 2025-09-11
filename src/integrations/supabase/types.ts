@@ -1182,6 +1182,7 @@ export type Database = {
           cep: string | null
           cidade: string | null
           cnpj: string | null
+          grupo_id: number | null
           id: number
           nome: string
           numero: string
@@ -1196,6 +1197,7 @@ export type Database = {
           cep?: string | null
           cidade?: string | null
           cnpj?: string | null
+          grupo_id?: number | null
           id?: number
           nome: string
           numero: string
@@ -1210,6 +1212,7 @@ export type Database = {
           cep?: string | null
           cidade?: string | null
           cnpj?: string | null
+          grupo_id?: number | null
           id?: number
           nome?: string
           numero?: string
