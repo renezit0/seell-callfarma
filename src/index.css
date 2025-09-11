@@ -69,11 +69,13 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 84% 5%;
 
-    --primary: 222 84% 5%; /* Dark primary color for better contrast */
+    --primary: 0 0% 13%; /* Voltando ao valor original #212121 */
     --primary-foreground: 0 0% 100%;
+    --primary-hsl: 0 0% 13%; /* Restaurando variável que é usada pelos temas por usuário */
 
     --secondary: 45 96% 53%; /* #ffbe0b in HSL */
     --secondary-foreground: 0 0% 0%;
+    --secondary-hsl: 45 96% 53%; /* Restaurando variável que é usada pelos temas por usuário */
 
     --muted: 210 40% 96%; /* Very light gray */
     --muted-foreground: 215 16% 47%; /* Medium gray - FIXED FROM RGB */
@@ -86,7 +88,7 @@
 
     --border: 214 32% 91%; /* Light border */
     --input: 214 32% 91%;
-    --ring: 222 84% 5%;
+    --ring: 0 0% 13%;
 
     --radius: 0.75rem;
   }
