@@ -896,33 +896,16 @@ export const useCallfarmaAPI = () => {
   const buscarVendasCampanhaDetalhada = async (filtros: FiltroCampanha): Promise<any[]> => {
     setLoading(true);
     try {
-      console.log('🔍 Buscando colaboradores da campanha com filtros:', filtros);
-      
       const params: any = {
         dataFim: filtros.dataFim,
         dataIni: filtros.dataInicio,
-        groupBy: 'scefun.CDFUN,scefilial.CDFIL', // Agrupar por funcionário e loja
         orderBy: 'TOTAL_VLR_VE desc'
       };
 
-      // Adicionar filtros específicos da campanha
-      if (filtros.filtroFornecedores) {
-        params.filtroFornecedores = filtros.filtroFornecedores;
-      }
-      if (filtros.filtroMarcas) {
-        params.filtroMarcas = filtros.filtroMarcas;
-      }
-      if (filtros.filtroFamilias) {
-        params.filtroFamilias = filtros.filtroFamilias;
-      }
-      if (filtros.filtroGrupos) {
-        params.filtroGrupos = filtros.filtroGrupos;
-      }
+      // Adicionar filtro de produtos se especificado
       if (filtros.filtroProduto) {
         params.filtroProduto = filtros.filtroProduto;
       }
-
-      console.log('📤 Parâmetros da requisição para colaboradores:', params);
 
       const { data, error } = await supabase.functions.invoke('callfarma-vendas', {
         body: {
@@ -931,41 +914,9 @@ export const useCallfarmaAPI = () => {
         }
       });
 
-      if (error) {
-        console.error('❌ Erro na API:', error);
-        throw error;
-      }
+      if (error) throw error;
       
-      const rawData = data?.msg || [];
-      console.log('📊 Dados recebidos para colaboradores:', rawData.length, 'registros');
-      console.log('💾 Primeiros registros:', rawData.slice(0, 3));
-      
-      // Agregar dados por funcionário
-      const colaboradoresMap = new Map<string, any>();
-      
-      rawData.forEach((item: any) => {
-        const key = `${item.CDFUN}-${item.CDFIL}`;
-        
-        if (colaboradoresMap.has(key)) {
-          const colaborador = colaboradoresMap.get(key)!;
-          colaborador.TOTAL_VALOR += item.TOTAL_VLR_VE || 0;
-          colaborador.TOTAL_QUANTIDADE += item.TOTAL_QTD_VE || 0;
-        } else {
-          colaboradoresMap.set(key, {
-            CDFUN: item.CDFUN,
-            NOMEFUN: item.NOMEFUN,
-            CDFIL: item.CDFIL,
-            NOMEFIL: item.NOMEFIL,
-            TOTAL_VALOR: item.TOTAL_VLR_VE || 0,
-            TOTAL_QUANTIDADE: item.TOTAL_QTD_VE || 0
-          });
-        }
-      });
-      
-      const colaboradores = Array.from(colaboradoresMap.values());
-      console.log('✅ Colaboradores agregados:', colaboradores.length);
-      
-      return colaboradores;
+      return data?.msg || [];
     } catch (error) {
       console.error('Erro ao buscar vendas detalhadas da campanha:', error);
       toast({
