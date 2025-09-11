@@ -91,6 +91,8 @@ interface LojaRanking {
   nome: string;
   grupo_id: string;
   totalVendas: number;
+  meta: number;
+  percentualAtingimento: number;
   totalColaboradores: number;
   mediaVendasPorColaborador: number;
   posicao: number;
@@ -103,6 +105,8 @@ interface ColaboradorRanking {
   loja_nome: string;
   grupo_id: string;
   totalVendas: number;
+  meta: number;
+  percentualAtingimento: number;
   posicao: number;
 }
 
@@ -112,6 +116,8 @@ interface GrupoRanking {
   lojas: LojaRanking[];
   colaboradores: ColaboradorRanking[];
   totalVendas: number;
+  totalMeta: number;
+  percentualAtingimentoGrupo: number;
   totalLojas: number;
   totalColaboradores: number;
 }
@@ -1079,12 +1085,21 @@ export default function Campanhas() {
           ? totalVendas / totalColaboradores 
           : 0;
 
+        // Buscar meta da loja baseada no tipo da campanha
+        const meta = campanha.tipo_meta === 'quantidade' 
+          ? participante.meta_quantidade || 0
+          : participante.meta_valor || 0;
+        
+        const percentualAtingimento = meta > 0 ? (totalVendas / meta) * 100 : 0;
+
         lojasComVendas.push({
           id: loja.id,
           numero: loja.numero,
           nome: loja.nome,
           grupo_id: participante.grupo_id || '1',
           totalVendas,
+          meta,
+          percentualAtingimento,
           totalColaboradores: totalColaboradores || 0,
           mediaVendasPorColaborador,
           posicao: 0
@@ -1102,8 +1117,8 @@ export default function Campanhas() {
 
       const grupos: GrupoRanking[] = [];
       gruposMap.forEach((lojasGrupo, grupoId) => {
-        // Ordenar lojas do grupo por vendas
-        lojasGrupo.sort((a, b) => b.totalVendas - a.totalVendas);
+        // Ordenar lojas do grupo por percentual de atingimento
+        lojasGrupo.sort((a, b) => b.percentualAtingimento - a.percentualAtingimento);
         
         // Adicionar posições dentro do grupo
         const lojasComPosicoes = lojasGrupo.map((loja, index) => ({
@@ -1112,6 +1127,8 @@ export default function Campanhas() {
         }));
 
         const totalVendasGrupo = lojasGrupo.reduce((sum, loja) => sum + loja.totalVendas, 0);
+        const totalMetaGrupo = lojasGrupo.reduce((sum, loja) => sum + loja.meta, 0);
+        const percentualAtingimentoGrupo = totalMetaGrupo > 0 ? (totalVendasGrupo / totalMetaGrupo) * 100 : 0;
         const totalColaboradoresGrupo = lojasGrupo.reduce((sum, loja) => sum + loja.totalColaboradores, 0);
 
         grupos.push({
@@ -1120,13 +1137,15 @@ export default function Campanhas() {
           lojas: lojasComPosicoes,
           colaboradores: [],
           totalVendas: totalVendasGrupo,
+          totalMeta: totalMetaGrupo,
+          percentualAtingimentoGrupo,
           totalLojas: lojasGrupo.length,
           totalColaboradores: totalColaboradoresGrupo
         });
       });
 
-      // Ordenar grupos por total de vendas
-      grupos.sort((a, b) => b.totalVendas - a.totalVendas);
+      // Ordenar grupos por percentual de atingimento
+      grupos.sort((a, b) => b.percentualAtingimentoGrupo - a.percentualAtingimentoGrupo);
 
       setGruposRanking(grupos);
     } catch (error) {
@@ -1207,8 +1226,16 @@ export default function Campanhas() {
         const totalColaboradores = colaboradores?.length || 1;
         const vendasPorColaborador = totalVendasLoja / totalColaboradores;
 
+        // Meta individual por colaborador (meta da loja dividida pelo número de colaboradores)
+        const metaLoja = campanha.tipo_meta === 'quantidade' 
+          ? participante.meta_quantidade || 0
+          : participante.meta_valor || 0;
+        const metaPorColaborador = metaLoja / totalColaboradores;
+
         for (const colaborador of colaboradores || []) {
           if (vendasPorColaborador > 0) {
+            const percentualAtingimento = metaPorColaborador > 0 ? (vendasPorColaborador / metaPorColaborador) * 100 : 0;
+            
             colaboradoresComVendas.push({
               id: colaborador.id,
               nome: colaborador.nome,
@@ -1216,6 +1243,8 @@ export default function Campanhas() {
               loja_nome: loja.nome,
               grupo_id: participante.grupo_id || '1',
               totalVendas: vendasPorColaborador,
+              meta: metaPorColaborador,
+              percentualAtingimento,
               posicao: 0
             });
           }
@@ -1233,8 +1262,8 @@ export default function Campanhas() {
 
       const grupos: GrupoRanking[] = [];
       gruposMap.forEach((colaboradoresGrupo, grupoId) => {
-        // Ordenar colaboradores do grupo por vendas
-        colaboradoresGrupo.sort((a, b) => b.totalVendas - a.totalVendas);
+        // Ordenar colaboradores do grupo por percentual de atingimento
+        colaboradoresGrupo.sort((a, b) => b.percentualAtingimento - a.percentualAtingimento);
         
         // Adicionar posições dentro do grupo
         const colaboradoresComPosicoes = colaboradoresGrupo.map((colaborador, index) => ({
@@ -1243,6 +1272,8 @@ export default function Campanhas() {
         }));
 
         const totalVendasGrupo = colaboradoresGrupo.reduce((sum, col) => sum + col.totalVendas, 0);
+        const totalMetaGrupo = colaboradoresGrupo.reduce((sum, col) => sum + col.meta, 0);
+        const percentualAtingimentoGrupo = totalMetaGrupo > 0 ? (totalVendasGrupo / totalMetaGrupo) * 100 : 0;
 
         grupos.push({
           grupo_id: grupoId,
@@ -1250,13 +1281,15 @@ export default function Campanhas() {
           lojas: [],
           colaboradores: colaboradoresComPosicoes,
           totalVendas: totalVendasGrupo,
+          totalMeta: totalMetaGrupo,
+          percentualAtingimentoGrupo,
           totalLojas: 0,
           totalColaboradores: colaboradoresGrupo.length
         });
       });
 
-      // Ordenar grupos por total de vendas
-      grupos.sort((a, b) => b.totalVendas - a.totalVendas);
+      // Ordenar grupos por percentual de atingimento
+      grupos.sort((a, b) => b.percentualAtingimentoGrupo - a.percentualAtingimentoGrupo);
 
       setGruposRanking(grupos);
     } catch (error) {
@@ -1399,10 +1432,13 @@ export default function Campanhas() {
                           </CardTitle>
                           <div className="text-right">
                             <div className="text-2xl font-bold text-primary">
-                              {formatarValorStatus(grupo.totalVendas)}
+                              {grupo.percentualAtingimentoGrupo.toFixed(1)}%
                             </div>
                             <div className="text-sm text-muted-foreground">
                               {grupo.totalLojas} lojas • {grupo.totalColaboradores} colaboradores
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {formatarValorStatus(grupo.totalVendas)} de {formatarValorStatus(grupo.totalMeta)}
                             </div>
                           </div>
                         </div>
@@ -1424,9 +1460,12 @@ export default function Campanhas() {
                                   </div>
                                   <div className="text-right">
                                     <p className="text-xl font-bold text-primary">
-                                      {formatarValorStatus(loja.totalVendas)}
+                                      {loja.percentualAtingimento.toFixed(1)}%
                                     </p>
                                     <p className="text-sm text-muted-foreground">
+                                      {formatarValorStatus(loja.totalVendas)} de {formatarValorStatus(loja.meta)}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
                                       Média: {formatarValorStatus(loja.mediaVendasPorColaborador)}
                                     </p>
                                   </div>
@@ -1472,10 +1511,13 @@ export default function Campanhas() {
                           </CardTitle>
                           <div className="text-right">
                             <div className="text-2xl font-bold text-primary">
-                              {formatarValorStatus(grupo.totalVendas)}
+                              {grupo.percentualAtingimentoGrupo.toFixed(1)}%
                             </div>
                             <div className="text-sm text-muted-foreground">
                               {grupo.totalColaboradores} colaboradores
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {formatarValorStatus(grupo.totalVendas)} de {formatarValorStatus(grupo.totalMeta)}
                             </div>
                           </div>
                         </div>
@@ -1495,7 +1537,10 @@ export default function Campanhas() {
                                   </div>
                                   <div className="text-right">
                                     <p className="text-xl font-bold text-primary">
-                                      {formatarValorStatus(colaborador.totalVendas)}
+                                      {colaborador.percentualAtingimento.toFixed(1)}%
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {formatarValorStatus(colaborador.totalVendas)} de {formatarValorStatus(colaborador.meta)}
                                     </p>
                                   </div>
                                 </div>
