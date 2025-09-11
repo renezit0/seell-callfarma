@@ -97,10 +97,10 @@
   
   /* Administrador (Red) */
   body.user-type-admin {
-    --primary: #d32f2f;
+    --primary: 356 75% 53%;
     --primary-light: #f44336;
     --primary-dark: #b71c1c;
-    --secondary: #ffcdd2;
+    --secondary: 356 46% 86%;
     --secondary-light: #ffebee;
     --secondary-dark: #c62828;
     --text-on-primary: #ffffff;
@@ -112,10 +112,10 @@
   /* Gerente/Líder - Gerente Loja (Black/Gold) */
   body.user-type-gerente,
   body.user-type-lider {
-    --primary: #212121;
+    --primary: 0 0% 13%;
     --primary-light: #484848;
     --primary-dark: #000000;
-    --secondary: #ffbe0b;
+    --secondary: 45 96% 53%;
     --secondary-light: #ffd634;
     --secondary-dark: #e6ab0a;
     --text-on-primary: #ffffff;
@@ -127,10 +127,10 @@
   /* Farmacêutico/SUB (Turquoise) */
   body.user-type-farmaceutico,
   body.user-type-subgerente {
-    --primary: #00838f;
+    --primary: 187 100% 28%;
     --primary-light: #26c6da;
     --primary-dark: #006064;
-    --secondary: #4dd0e1;
+    --secondary: 187 65% 59%;
     --secondary-light: #b2ebf2;
     --secondary-dark: #00acc1;
     --text-on-primary: #ffffff;
@@ -142,10 +142,10 @@
   /* Auxiliar de Farmácia II/SUB (Blue) */
   body.user-type-auxiliar,
   body.user-type-sublider {
-    --primary: #1565c0;
+    --primary: 211 87% 42%;
     --primary-light: #42a5f5;
     --primary-dark: #0d47a1;
-    --secondary: #64b5f6;
+    --secondary: 210 79% 69%;
     --secondary-light: #9be7ff;
     --secondary-dark: #2286c3;
     --text-on-primary: #ffffff;
@@ -156,10 +156,10 @@
 
   /* Auxiliar de Farmácia I (Light Blue) */
   body.user-type-aux1 {
-    --primary: #1976d2;
+    --primary: 211 71% 47%;
     --primary-light: #64b5f6;
     --primary-dark: #1565c0;
-    --secondary: #90caf9;
+    --secondary: 211 65% 78%;
     --secondary-light: #bbdefb;
     --secondary-dark: #42a5f5;
     --text-on-primary: #ffffff;
@@ -170,10 +170,10 @@
   
   /* Auxiliar de Farmácia - Conveniência (Orange) */
   body.user-type-aux_conveniencia {
-    --primary: #f57c00;
+    --primary: 35 100% 48%;
     --primary-light: #ffb74d;
     --primary-dark: #e65100;
-    --secondary: #ffcc02;
+    --secondary: 50 100% 50%;
     --secondary-light: #fff176;
     --secondary-dark: #ff8f00;
     --text-on-primary: #ffffff;
@@ -184,10 +184,10 @@
   
   /* Consultora de Beleza (Pink) */
   body.user-type-consultora {
-    --primary: #e91e63;
+    --primary: 340 82% 52%;
     --primary-light: #f48fb1;
     --primary-dark: #c2185b;
-    --secondary: #ff80ab;
+    --secondary: 340 100% 75%;
     --secondary-light: #ffb2dd;
     --secondary-dark: #c94f7c;
     --text-on-primary: #ffffff;

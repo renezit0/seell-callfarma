@@ -38,7 +38,7 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
 
   return (
     <div className={cn(
-      "sidebar fixed top-0 left-0 z-50 flex flex-col h-full text-white shadow-lg transition-all duration-300 ease-in-out bg-gray-900 overflow-hidden",
+      "sidebar fixed top-0 left-0 z-50 flex flex-col h-full text-sidebar-foreground shadow-lg transition-all duration-300 ease-in-out bg-sidebar overflow-hidden",
       "w-16 hover:w-56 group",
       className?.includes('expanded') ? "w-56" : "",
       className
@@ -46,7 +46,7 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
       {/* Header */}
       <div className="sidebar-header flex items-center justify-center p-3 mb-3">
         <div className="sidebar-logo flex items-center justify-center w-full">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-white/10">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-sidebar-accent">
             <img src={miniIconWhite} alt="Logo" className="w-8 h-8 object-contain" />
           </div>
         </div>
@@ -92,17 +92,18 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
               key={index}
               to={item.href}
               className={cn(
-                "nav-item flex items-center rounded-lg text-white/80 transition-all duration-150 relative",
-                "hover:bg-white/8 hover:text-white",
+                "nav-item flex items-center rounded-lg text-sidebar-foreground/80 transition-all duration-150 relative",
+                "hover:bg-sidebar-accent hover:text-sidebar-foreground",
                 "p-2",
                 "justify-start",
-                isActive && "active bg-white/10 text-white border-l-3 border-l-secondary"
+                isActive && "active bg-sidebar-accent text-sidebar-foreground border-l-3 border-l-sidebar-primary"
               )}
             >
               <div className={cn(
-                "nav-icon w-10 h-10 rounded-lg bg-white/10 flex items-center transition-all duration-150 flex-shrink-0",
-                className?.includes('expanded') ? "justify-center" : "justify-center group-hover:justify-center",
-                (isActive || "group-hover:bg-secondary") && "bg-secondary text-white"
+                "nav-icon w-10 h-10 rounded-lg bg-sidebar-accent flex items-center transition-all duration-150 flex-shrink-0 justify-center",
+                !className?.includes('expanded') && "group-hover:justify-center",
+                "group-hover:bg-sidebar-primary group-hover:text-sidebar-primary-foreground",
+                isActive && "bg-sidebar-primary text-sidebar-primary-foreground"
               )}>
                 <i className={`${item.icon} text-base`}></i>
               </div>
@@ -118,7 +119,7 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
       </nav>
 
       {/* User Profile Footer */}
-      <div className="user-profile flex items-center p-3 border-t border-white/10 bg-gray-900 flex-shrink-0">
+      <div className="user-profile flex items-center p-3 border-t border-sidebar-border bg-sidebar flex-shrink-0">
         <Avatar className="w-10 h-10 flex-shrink-0">
           {avatarUrl ? (
             <AvatarImage 
@@ -127,7 +128,7 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
               className="object-cover"
             />
           ) : null}
-          <AvatarFallback className="bg-secondary text-white font-bold text-sm">
+          <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground font-bold text-sm">
             {user?.nome?.charAt(0) || "U"}
           </AvatarFallback>
         </Avatar>
@@ -135,10 +136,10 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
           "user-info ml-3 transition-opacity duration-200 overflow-hidden flex-1",
           className?.includes('expanded') ? "opacity-100" : "opacity-0 group-hover:opacity-100"
         )}>
-          <div className="user-name text-white font-semibold text-sm truncate">
+          <div className="user-name text-sidebar-foreground font-semibold text-sm truncate">
             {user?.nome}
           </div>
-          <div className="user-role text-white/60 text-xs truncate capitalize">
+          <div className="user-role text-sidebar-foreground/60 text-xs truncate capitalize">
             {getDescricaoTipoUsuario(user?.tipo || '')}
           </div>
         </div>
@@ -147,7 +148,7 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
           size="sm"
           onClick={logout}
           className={cn(
-            "transition-opacity duration-200 ml-2 text-white hover:bg-white/10 hover:text-white",
+            "transition-opacity duration-200 ml-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground",
             className?.includes('expanded') ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           )}
         >
