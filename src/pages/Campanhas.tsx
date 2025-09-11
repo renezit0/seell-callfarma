@@ -101,8 +101,19 @@ interface ColaboradorRanking {
   nome: string;
   loja_id: number;
   loja_nome: string;
+  grupo_id: string;
   totalVendas: number;
   posicao: number;
+}
+
+interface GrupoRanking {
+  grupo_id: string;
+  nome_grupo: string;
+  lojas: LojaRanking[];
+  colaboradores: ColaboradorRanking[];
+  totalVendas: number;
+  totalLojas: number;
+  totalColaboradores: number;
 }
 
 export default function Campanhas() {
@@ -121,8 +132,7 @@ export default function Campanhas() {
   // Estados para status/ranking
   const [campanhaStatusSelecionada, setCampanhaStatusSelecionada] = useState<number | null>(null);
   const [campanhasStatus, setCampanhasStatus] = useState<Campanha[]>([]);
-  const [lojasRanking, setLojasRanking] = useState<LojaRanking[]>([]);
-  const [colaboradoresRanking, setColaboradoresRanking] = useState<ColaboradorRanking[]>([]);
+  const [gruposRanking, setGruposRanking] = useState<GrupoRanking[]>([]);
   const [viewMode, setViewMode] = useState<'lojas' | 'colaboradores'>('lojas');
   
   // Estados para criação de campanhas
@@ -938,15 +948,16 @@ export default function Campanhas() {
     if (view === 'status' && campanhaStatusSelecionada) {
       carregarDadosStatus();
     }
-  }, [campanhaStatusSelecionada, periodoAtual]);
+  }, [campanhaStatusSelecionada, viewMode]);
 
   const carregarDadosStatus = async () => {
     setLoading(true);
     try {
-      await Promise.all([
-        carregarRankingLojas(),
-        carregarRankingColaboradores()
-      ]);
+      if (viewMode === 'lojas') {
+        await carregarRankingLojas();
+      } else {
+        await carregarRankingColaboradores();
+      }
     } catch (error) {
       console.error('Erro ao carregar dados do status:', error);
       toast({
@@ -1019,7 +1030,7 @@ export default function Campanhas() {
       if (participantesError) throw participantesError;
 
       if (!participantes || participantes.length === 0) {
-        setLojasRanking([]);
+        setGruposRanking([]);
         return;
       }
 
@@ -1032,7 +1043,7 @@ export default function Campanhas() {
 
       if (lojasError) throw lojasError;
 
-      // Buscar vendas da API externa para a campanha
+      // Buscar vendas da API externa para a campanha usando o período completo
       const filtros = {
         dataInicio: campanha.data_inicio,
         dataFim: campanha.data_fim,
@@ -1080,16 +1091,44 @@ export default function Campanhas() {
         });
       }
 
-      // Ordenar por total de vendas
-      lojasComVendas.sort((a, b) => b.totalVendas - a.totalVendas);
+      // Agrupar lojas por grupo
+      const gruposMap = new Map<string, LojaRanking[]>();
+      lojasComVendas.forEach(loja => {
+        if (!gruposMap.has(loja.grupo_id)) {
+          gruposMap.set(loja.grupo_id, []);
+        }
+        gruposMap.get(loja.grupo_id)!.push(loja);
+      });
 
-      // Adicionar posições
-      const lojasComPosicoes = lojasComVendas.map((loja, index) => ({
-        ...loja,
-        posicao: index + 1
-      }));
+      const grupos: GrupoRanking[] = [];
+      gruposMap.forEach((lojasGrupo, grupoId) => {
+        // Ordenar lojas do grupo por vendas
+        lojasGrupo.sort((a, b) => b.totalVendas - a.totalVendas);
+        
+        // Adicionar posições dentro do grupo
+        const lojasComPosicoes = lojasGrupo.map((loja, index) => ({
+          ...loja,
+          posicao: index + 1
+        }));
 
-      setLojasRanking(lojasComPosicoes);
+        const totalVendasGrupo = lojasGrupo.reduce((sum, loja) => sum + loja.totalVendas, 0);
+        const totalColaboradoresGrupo = lojasGrupo.reduce((sum, loja) => sum + loja.totalColaboradores, 0);
+
+        grupos.push({
+          grupo_id: grupoId,
+          nome_grupo: `Grupo ${grupoId}`,
+          lojas: lojasComPosicoes,
+          colaboradores: [],
+          totalVendas: totalVendasGrupo,
+          totalLojas: lojasGrupo.length,
+          totalColaboradores: totalColaboradoresGrupo
+        });
+      });
+
+      // Ordenar grupos por total de vendas
+      grupos.sort((a, b) => b.totalVendas - a.totalVendas);
+
+      setGruposRanking(grupos);
     } catch (error) {
       console.error('Erro ao carregar ranking de lojas:', error);
     }
@@ -1117,7 +1156,7 @@ export default function Campanhas() {
       if (participantesError) throw participantesError;
 
       if (!participantes || participantes.length === 0) {
-        setColaboradoresRanking([]);
+        setGruposRanking([]);
         return;
       }
 
@@ -1130,7 +1169,7 @@ export default function Campanhas() {
 
       if (lojasError) throw lojasError;
 
-      // Buscar vendas da API externa para a campanha
+      // Buscar vendas da API externa para a campanha usando o período completo
       const filtros = {
         dataInicio: campanha.data_inicio,
         dataFim: campanha.data_fim,
@@ -1175,6 +1214,7 @@ export default function Campanhas() {
               nome: colaborador.nome,
               loja_id: loja.id,
               loja_nome: loja.nome,
+              grupo_id: participante.grupo_id || '1',
               totalVendas: vendasPorColaborador,
               posicao: 0
             });
@@ -1182,16 +1222,43 @@ export default function Campanhas() {
         }
       }
 
-      // Ordenar por total de vendas
-      colaboradoresComVendas.sort((a, b) => b.totalVendas - a.totalVendas);
+      // Agrupar colaboradores por grupo de loja
+      const gruposMap = new Map<string, ColaboradorRanking[]>();
+      colaboradoresComVendas.forEach(colaborador => {
+        if (!gruposMap.has(colaborador.grupo_id)) {
+          gruposMap.set(colaborador.grupo_id, []);
+        }
+        gruposMap.get(colaborador.grupo_id)!.push(colaborador);
+      });
 
-      // Adicionar posições
-      const colaboradoresComPosicoes = colaboradoresComVendas.map((colaborador, index) => ({
-        ...colaborador,
-        posicao: index + 1
-      }));
+      const grupos: GrupoRanking[] = [];
+      gruposMap.forEach((colaboradoresGrupo, grupoId) => {
+        // Ordenar colaboradores do grupo por vendas
+        colaboradoresGrupo.sort((a, b) => b.totalVendas - a.totalVendas);
+        
+        // Adicionar posições dentro do grupo
+        const colaboradoresComPosicoes = colaboradoresGrupo.map((colaborador, index) => ({
+          ...colaborador,
+          posicao: index + 1
+        }));
 
-      setColaboradoresRanking(colaboradoresComPosicoes);
+        const totalVendasGrupo = colaboradoresGrupo.reduce((sum, col) => sum + col.totalVendas, 0);
+
+        grupos.push({
+          grupo_id: grupoId,
+          nome_grupo: `Grupo ${grupoId}`,
+          lojas: [],
+          colaboradores: colaboradoresComPosicoes,
+          totalVendas: totalVendasGrupo,
+          totalLojas: 0,
+          totalColaboradores: colaboradoresGrupo.length
+        });
+      });
+
+      // Ordenar grupos por total de vendas
+      grupos.sort((a, b) => b.totalVendas - a.totalVendas);
+
+      setGruposRanking(grupos);
     } catch (error) {
       console.error('Erro ao carregar ranking de colaboradores:', error);
     }
@@ -1307,11 +1374,13 @@ export default function Campanhas() {
             <div className="grid gap-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold">
-                  {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.nome} - Ranking de Lojas
+                  {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.nome} - Ranking de Lojas por Grupo
                 </h2>
-                <Badge variant="secondary">{lojasRanking.length} lojas</Badge>
+                <Badge variant="secondary">
+                  {gruposRanking.reduce((sum, grupo) => sum + grupo.totalLojas, 0)} lojas em {gruposRanking.length} grupos
+                </Badge>
               </div>
-              {lojasRanking.length === 0 ? (
+              {gruposRanking.length === 0 ? (
                 <Card>
                   <CardContent className="text-center py-12">
                     <Store className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -1319,28 +1388,52 @@ export default function Campanhas() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid gap-4">
-                  {lojasRanking.map((loja) => (
-                    <Card key={loja.id} className={`transition-all hover:shadow-lg ${obterCorCard(loja.posicao)}`}>
-                      <CardContent className="p-6">
+                <div className="space-y-6">
+                  {gruposRanking.map((grupo, grupoIndex) => (
+                    <Card key={grupo.grupo_id} className="border-2">
+                      <CardHeader className="pb-4">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            {obterIconePosicao(loja.posicao)}
-                            <div>
-                              <h3 className="text-lg font-semibold">{loja.numero} - {loja.nome}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {loja.totalColaboradores} colaboradores
-                              </p>
+                          <CardTitle className="flex items-center gap-2">
+                            <span className="text-2xl font-bold">#{grupoIndex + 1}</span>
+                            <span>{grupo.nome_grupo}</span>
+                          </CardTitle>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-primary">
+                              {formatarValorStatus(grupo.totalVendas)}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {grupo.totalLojas} lojas • {grupo.totalColaboradores} colaboradores
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-2xl font-bold text-primary">
-                              {formatarValorStatus(loja.totalVendas)}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              Média por colaborador: {formatarValorStatus(loja.mediaVendasPorColaborador)}
-                            </p>
-                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid gap-3">
+                          {grupo.lojas.map((loja) => (
+                            <Card key={loja.id} className={`transition-all hover:shadow-md ${obterCorCard(loja.posicao)}`}>
+                              <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    {obterIconePosicao(loja.posicao)}
+                                    <div>
+                                      <h4 className="font-semibold">{loja.numero} - {loja.nome}</h4>
+                                      <p className="text-sm text-muted-foreground">
+                                        {loja.totalColaboradores} colaboradores
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-xl font-bold text-primary">
+                                      {formatarValorStatus(loja.totalVendas)}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      Média: {formatarValorStatus(loja.mediaVendasPorColaborador)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
                         </div>
                       </CardContent>
                     </Card>
@@ -1354,11 +1447,13 @@ export default function Campanhas() {
             <div className="grid gap-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold">
-                  {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.nome} - Ranking de Colaboradores
+                  {campanhasStatus.find(c => c.id === campanhaStatusSelecionada)?.nome} - Ranking de Colaboradores por Grupo
                 </h2>
-                <Badge variant="secondary">{colaboradoresRanking.length} colaboradores</Badge>
+                <Badge variant="secondary">
+                  {gruposRanking.reduce((sum, grupo) => sum + grupo.totalColaboradores, 0)} colaboradores em {gruposRanking.length} grupos
+                </Badge>
               </div>
-              {colaboradoresRanking.length === 0 ? (
+              {gruposRanking.length === 0 ? (
                 <Card>
                   <CardContent className="text-center py-12">
                     <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -1366,23 +1461,47 @@ export default function Campanhas() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid gap-3">
-                  {colaboradoresRanking.map((colaborador) => (
-                    <Card key={colaborador.id} className={`transition-all hover:shadow-md ${obterCorCard(colaborador.posicao)}`}>
-                      <CardContent className="p-4">
+                <div className="space-y-6">
+                  {gruposRanking.map((grupo, grupoIndex) => (
+                    <Card key={grupo.grupo_id} className="border-2">
+                      <CardHeader className="pb-4">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            {obterIconePosicao(colaborador.posicao)}
-                            <div>
-                              <h4 className="font-semibold">{colaborador.nome}</h4>
-                              <p className="text-sm text-muted-foreground">{colaborador.loja_nome}</p>
+                          <CardTitle className="flex items-center gap-2">
+                            <span className="text-2xl font-bold">#{grupoIndex + 1}</span>
+                            <span>{grupo.nome_grupo}</span>
+                          </CardTitle>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-primary">
+                              {formatarValorStatus(grupo.totalVendas)}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {grupo.totalColaboradores} colaboradores
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-xl font-bold text-primary">
-                              {formatarValorStatus(colaborador.totalVendas)}
-                            </p>
-                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid gap-3">
+                          {grupo.colaboradores.map((colaborador) => (
+                            <Card key={colaborador.id} className={`transition-all hover:shadow-md ${obterCorCard(colaborador.posicao)}`}>
+                              <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    {obterIconePosicao(colaborador.posicao)}
+                                    <div>
+                                      <h4 className="font-semibold">{colaborador.nome}</h4>
+                                      <p className="text-sm text-muted-foreground">{colaborador.loja_nome}</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-xl font-bold text-primary">
+                                      {formatarValorStatus(colaborador.totalVendas)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
                         </div>
                       </CardContent>
                     </Card>
