@@ -236,6 +236,17 @@ export default function Campanhas() {
       if (error) throw error;
       
       setLojasDisponiveis(data || []);
+      
+      // Pré-selecionar todas as lojas automaticamente
+      const lojasPreSelecionadas = (data || []).map(loja => ({
+        loja_id: loja.id,
+        codigo_loja: parseInt(loja.numero),
+        meta_quantidade: 0,
+        meta_valor: 0,
+        grupo_id: novaCampanha.grupo_campanha
+      }));
+      
+      setLojasParticipantes(lojasPreSelecionadas);
     } catch (error) {
       toast({
         title: "Erro",
@@ -936,33 +947,65 @@ export default function Campanhas() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Lista de lojas disponíveis */}
-          <div className="space-y-2">
-            <Label>Selecionar Loja</Label>
-            <Select onValueChange={(lojaId) => {
-              const loja = lojasDisponiveis.find(l => l.id === parseInt(lojaId));
-              if (loja) adicionarLoja(loja);
-            }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Escolha uma loja para adicionar" />
-              </SelectTrigger>
-              <SelectContent>
-                {lojasDisponiveis
-                  .filter(loja => !lojasParticipantes.find(l => l.loja_id === loja.id))
-                  .map(loja => (
-                    <SelectItem key={loja.id} value={loja.id.toString()}>
-                      {loja.numero} - {loja.nome} ({loja.regiao})
-                    </SelectItem>
-                  ))
-                }
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Botão para adicionar lojas restantes (caso o usuário tenha removido alguma) */}
+          {lojasDisponiveis.filter(loja => !lojasParticipantes.find(l => l.loja_id === loja.id)).length > 0 && (
+            <div className="space-y-2">
+              <Label>Adicionar Loja</Label>
+              <Select onValueChange={(lojaId) => {
+                const loja = lojasDisponiveis.find(l => l.id === parseInt(lojaId));
+                if (loja) adicionarLoja(loja);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Escolha uma loja para adicionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {lojasDisponiveis
+                    .filter(loja => !lojasParticipantes.find(l => l.loja_id === loja.id))
+                    .map(loja => (
+                      <SelectItem key={loja.id} value={loja.id.toString()}>
+                        {loja.numero} - {loja.nome} ({loja.regiao})
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Lista de lojas participantes */}
           {lojasParticipantes.length > 0 && (
             <div className="space-y-3">
-              <Label>Lojas Participantes e Metas ({lojasParticipantes.length})</Label>
+              <div className="flex items-center justify-between">
+                <Label>Lojas Participantes e Metas ({lojasParticipantes.length})</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Selecionar todas as lojas
+                      const todasLojas = lojasDisponiveis.map(loja => ({
+                        loja_id: loja.id,
+                        codigo_loja: parseInt(loja.numero),
+                        meta_quantidade: 0,
+                        meta_valor: 0,
+                        grupo_id: novaCampanha.grupo_campanha
+                      }));
+                      setLojasParticipantes(todasLojas);
+                    }}
+                  >
+                    Selecionar Todas
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLojasParticipantes([])}
+                  >
+                    Limpar Todas
+                  </Button>
+                </div>
+              </div>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {lojasParticipantes.map(lojaParticipante => {
                   const loja = lojasDisponiveis.find(l => l.id === lojaParticipante.loja_id);
