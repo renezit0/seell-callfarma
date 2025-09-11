@@ -896,6 +896,8 @@ export const useCallfarmaAPI = () => {
   const buscarVendasCampanhaDetalhada = async (filtros: FiltroCampanha): Promise<any[]> => {
     setLoading(true);
     try {
+      console.log('🔍 Buscando colaboradores da campanha com filtros:', filtros);
+      
       const params: any = {
         dataFim: filtros.dataFim,
         dataIni: filtros.dataInicio,
@@ -920,6 +922,8 @@ export const useCallfarmaAPI = () => {
         params.filtroProduto = filtros.filtroProduto;
       }
 
+      console.log('📤 Parâmetros da requisição para colaboradores:', params);
+
       const { data, error } = await supabase.functions.invoke('callfarma-vendas', {
         body: {
           endpoint: '/financeiro/vendas-por-funcionario',
@@ -927,9 +931,41 @@ export const useCallfarmaAPI = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro na API:', error);
+        throw error;
+      }
       
-      return data?.msg || [];
+      const rawData = data?.msg || [];
+      console.log('📊 Dados recebidos para colaboradores:', rawData.length, 'registros');
+      console.log('💾 Primeiros registros:', rawData.slice(0, 3));
+      
+      // Agregar dados por funcionário
+      const colaboradoresMap = new Map<string, any>();
+      
+      rawData.forEach((item: any) => {
+        const key = `${item.CDFUN}-${item.CDFIL}`;
+        
+        if (colaboradoresMap.has(key)) {
+          const colaborador = colaboradoresMap.get(key)!;
+          colaborador.TOTAL_VALOR += item.TOTAL_VLR_VE || 0;
+          colaborador.TOTAL_QUANTIDADE += item.TOTAL_QTD_VE || 0;
+        } else {
+          colaboradoresMap.set(key, {
+            CDFUN: item.CDFUN,
+            NOMEFUN: item.NOMEFUN,
+            CDFIL: item.CDFIL,
+            NOMEFIL: item.NOMEFIL,
+            TOTAL_VALOR: item.TOTAL_VLR_VE || 0,
+            TOTAL_QUANTIDADE: item.TOTAL_QTD_VE || 0
+          });
+        }
+      });
+      
+      const colaboradores = Array.from(colaboradoresMap.values());
+      console.log('✅ Colaboradores agregados:', colaboradores.length);
+      
+      return colaboradores;
     } catch (error) {
       console.error('Erro ao buscar vendas detalhadas da campanha:', error);
       toast({
