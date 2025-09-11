@@ -870,7 +870,11 @@ export default function Campanhas() {
     return `${valor.toLocaleString('pt-BR')} un`;
   };
   const formatarData = (data: string) => {
-    return new Date(data).toLocaleDateString('pt-BR');
+    // Corrigir problema de timezone que mostrava 1 dia antes
+    // Split da string de data e criar nova data com valores locais
+    const [ano, mes, dia] = data.split('-').map(Number);
+    const dataLocal = new Date(ano, mes - 1, dia); // mes-1 porque Date usa 0-11 para meses
+    return dataLocal.toLocaleDateString('pt-BR');
   };
   const renderLista = () => <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -884,15 +888,15 @@ export default function Campanhas() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setView('criar')} className="gap-2">
+          <Button onClick={() => setView('criar')} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
             <Plus size={16} />
             Nova Campanha
           </Button>
-          <Button onClick={() => setView('vendas-funcionarios')} variant="outline" className="gap-2">
+          <Button onClick={() => setView('vendas-funcionarios')} variant="outline" className="gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground">
             <Users size={16} />
             Vendas API Externa
           </Button>
-          <Button onClick={() => setView('status')} variant="outline" className="gap-2">
+          <Button onClick={() => setView('status')} variant="outline" className="gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground">
             <Trophy size={16} />
             Status & Rankings
           </Button>
@@ -937,7 +941,7 @@ export default function Campanhas() {
             <div className="flex items-end">
               <Button 
                 onClick={buscarCampanhas} 
-                className="w-full gap-2"
+                className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
                 size="default"
               >
                 <Target size={16} />
@@ -949,7 +953,7 @@ export default function Campanhas() {
             <Button 
               variant={!incluirInativas ? "default" : "outline"} 
               onClick={() => setIncluirInativas(false)} 
-              className="gap-2"
+              className={`gap-2 ${!incluirInativas ? 'bg-primary text-primary-foreground' : 'border-primary text-primary hover:bg-primary hover:text-primary-foreground'}`}
               size="sm"
             >
               <CheckCircle size={14} />
@@ -958,7 +962,7 @@ export default function Campanhas() {
             <Button 
               variant={incluirInativas ? "default" : "outline"} 
               onClick={() => setIncluirInativas(true)}
-              className="gap-2"
+              className={`gap-2 ${incluirInativas ? 'bg-primary text-primary-foreground' : 'border-primary text-primary hover:bg-primary hover:text-primary-foreground'}`}
               size="sm"
             >
               <Clock size={14} />
@@ -981,7 +985,7 @@ export default function Campanhas() {
             <p className="text-muted-foreground mb-4">
               Não encontramos campanhas com os filtros aplicados.
             </p>
-            <Button onClick={() => setView('criar')} className="gap-2">
+            <Button onClick={() => setView('criar')} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
               <Plus size={16} />
               Criar Primeira Campanha
             </Button>
