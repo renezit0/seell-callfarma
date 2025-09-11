@@ -315,10 +315,14 @@ export default function Campanhas() {
 
     setCriandoCampanha(true);
     try {
+      const campanhaId = Date.now();
       // Criar campanha
       const { data: campanhaCriada, error: erroCampanha } = await supabase
         .from('campanhas_vendas_lojas')
         .insert([{
+          id: campanhaId,
+          nome: novaCampanha.nome,
+          descricao: novaCampanha.descricao,
           data_inicio: novaCampanha.data_inicio,
           data_fim: novaCampanha.data_fim,
           tipo_meta: novaCampanha.tipo_meta,
@@ -331,8 +335,10 @@ export default function Campanhas() {
 
       if (erroCampanha) throw erroCampanha;
 
+      const baseId = Date.now();
       // Adicionar lojas participantes  
-      const participantesData = lojasParticipantes.map(loja => ({
+      const participantesData = lojasParticipantes.map((loja, idx) => ({
+        id: baseId + idx + 1,
         campanha_id: campanhaCriada.id,
         loja_id: loja.loja_id,
         codigo_loja: loja.codigo_loja,
