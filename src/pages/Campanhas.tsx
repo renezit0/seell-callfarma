@@ -372,6 +372,52 @@ export default function Campanhas() {
     });
   };
 
+  const excluirCampanha = async (campanhaId: number) => {
+    if (!confirm('Tem certeza que deseja excluir esta campanha? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
+    setEditandoCampanha(true);
+    try {
+      // Primeiro, excluir todos os participantes da campanha
+      const { error: erroParticipantes } = await supabase
+        .from('campanhas_vendas_lojas_participantes')
+        .delete()
+        .eq('campanha_id', campanhaId);
+
+      if (erroParticipantes) throw erroParticipantes;
+
+      // Depois, excluir a campanha
+      const { error: erroCampanha } = await supabase
+        .from('campanhas_vendas_lojas')
+        .delete()
+        .eq('id', campanhaId);
+
+      if (erroCampanha) throw erroCampanha;
+
+      toast({
+        title: "Sucesso",
+        description: "Campanha excluída com sucesso"
+      });
+
+      // Resetar estados e voltar para lista
+      setCampanhaEditando(null);
+      setLojasParticipantes([]);
+      setView('lista');
+      buscarCampanhas();
+
+    } catch (error) {
+      console.error('Erro ao excluir campanha:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir campanha",
+        variant: "destructive"
+      });
+    } finally {
+      setEditandoCampanha(false);
+    }
+  };
+
   const criarCampanha = async () => {
     if (!novaCampanha.nome || !novaCampanha.data_inicio || !novaCampanha.data_fim) {
       toast({
@@ -827,12 +873,17 @@ export default function Campanhas() {
     return new Date(data).toLocaleDateString('pt-BR');
   };
   const renderLista = () => <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">
-          <ChartLine className="inline mr-3" />
-          Acompanhamento de Vendas por Loja
-        </h1>
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            <ChartLine className="h-8 w-8 text-primary" />
+            Gestão de Campanhas
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Gerencie e acompanhe o desempenho das campanhas de vendas por loja
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <Button onClick={() => setView('criar')} className="gap-2">
             <Plus size={16} />
             Nova Campanha
@@ -848,97 +899,194 @@ export default function Campanhas() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+      <Card className="shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Filtros de Busca
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="dataInicio">Data Início</Label>
-              <Input id="dataInicio" type="date" value={filtroData.dataInicio} onChange={e => setFiltroData(prev => ({
-              ...prev,
-              dataInicio: e.target.value
-            }))} />
+              <Label htmlFor="dataInicio" className="text-sm font-medium">Data Início</Label>
+              <Input 
+                id="dataInicio" 
+                type="date" 
+                value={filtroData.dataInicio} 
+                onChange={e => setFiltroData(prev => ({
+                  ...prev,
+                  dataInicio: e.target.value
+                }))} 
+                className="mt-1"
+              />
             </div>
             <div>
-              <Label htmlFor="dataFim">Data Fim</Label>
-              <Input id="dataFim" type="date" value={filtroData.dataFim} onChange={e => setFiltroData(prev => ({
-              ...prev,
-              dataFim: e.target.value
-            }))} />
+              <Label htmlFor="dataFim" className="text-sm font-medium">Data Fim</Label>
+              <Input 
+                id="dataFim" 
+                type="date" 
+                value={filtroData.dataFim} 
+                onChange={e => setFiltroData(prev => ({
+                  ...prev,
+                  dataFim: e.target.value
+                }))} 
+                className="mt-1"
+              />
             </div>
             <div className="flex items-end">
-              <Button onClick={buscarCampanhas} className="w-full text-zinc-600 bg-[#ffc032]">
+              <Button 
+                onClick={buscarCampanhas} 
+                className="w-full gap-2"
+                size="default"
+              >
+                <Target size={16} />
                 Buscar Campanhas
               </Button>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant={!incluirInativas ? "default" : "outline"} onClick={() => setIncluirInativas(false)} className="text-slate-900 font-normal text-sm rounded-full bg-slate-400 hover:bg-slate-300">
-              Ativas
+          <div className="flex gap-2 pt-2 border-t">
+            <Button 
+              variant={!incluirInativas ? "default" : "outline"} 
+              onClick={() => setIncluirInativas(false)} 
+              className="gap-2"
+              size="sm"
+            >
+              <CheckCircle size={14} />
+              Apenas Ativas
             </Button>
-            <Button variant={incluirInativas ? "default" : "outline"} onClick={() => setIncluirInativas(true)}>
-              Todas
+            <Button 
+              variant={incluirInativas ? "default" : "outline"} 
+              onClick={() => setIncluirInativas(true)}
+              className="gap-2"
+              size="sm"
+            >
+              <Clock size={14} />
+              Todas as Campanhas
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {loading ? <div className="text-center py-8">Carregando campanhas...</div> : campanhas.length === 0 ? <Card>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+          <p className="text-muted-foreground">Carregando campanhas...</p>
+        </div>
+      ) : campanhas.length === 0 ? (
+        <Card className="shadow-sm">
           <CardContent className="text-center py-12">
             <ChartLine className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Nenhuma campanha encontrada.</p>
+            <h3 className="text-lg font-semibold mb-2">Nenhuma campanha encontrada</h3>
+            <p className="text-muted-foreground mb-4">
+              Não encontramos campanhas com os filtros aplicados.
+            </p>
+            <Button onClick={() => setView('criar')} className="gap-2">
+              <Plus size={16} />
+              Criar Primeira Campanha
+            </Button>
           </CardContent>
-        </Card> : <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {campanhas.map(campanha => {
-        const realizadoTotal = campanha.tipo_meta === 'quantidade' ? campanha.total_realizado_quantidade || 0 : campanha.total_realizado_valor || 0;
-        const progresso = calcularProgresso(realizadoTotal, campanha.meta_total || 0, campanha.data_inicio, campanha.data_fim);
-        return <Card key={campanha.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg">{campanha.nome}</CardTitle>
-                    <StatusBadge status={campanha.status === 'ativa' ? 'atingido' : 'pendente'} />
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Período:</span>
-                      <span>{formatarData(campanha.data_inicio)} a {formatarData(campanha.data_fim)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Tipo:</span>
-                      <span className="capitalize">{campanha.tipo_meta}</span>
-                    </div>
-                  </div>
-
-                  {!campanha.sem_metas && <div className="space-y-2">
-                      <Progress value={progresso.percentualRealizado} className="h-2" />
-                      <div className="flex justify-between text-sm">
-                        <span>{formatarValor(progresso.realizado, campanha.tipo_meta)}</span>
-                        <span className="text-muted-foreground">{progresso.percentualRealizado.toFixed(1)}%</span>
-                        <span>{formatarValor(progresso.meta, campanha.tipo_meta)}</span>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">
+              {campanhas.length} {campanhas.length === 1 ? 'campanha encontrada' : 'campanhas encontradas'}
+            </h2>
+            <Badge variant="outline" className="gap-1">
+              <Target size={12} />
+              {campanhas.filter(c => c.status === 'ativa').length} ativas
+            </Badge>
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {campanhas.map(campanha => {
+              const realizadoTotal = campanha.tipo_meta === 'quantidade' ? campanha.total_realizado_quantidade || 0 : campanha.total_realizado_valor || 0;
+              const progresso = calcularProgresso(realizadoTotal, campanha.meta_total || 0, campanha.data_inicio, campanha.data_fim);
+              
+              return (
+                <Card key={campanha.id} className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-primary/20 hover:border-l-primary">
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg leading-tight">{campanha.nome}</CardTitle>
+                        {campanha.descricao && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {campanha.descricao}
+                          </p>
+                        )}
                       </div>
-                    </div>}
+                      <StatusBadge status={campanha.status === 'ativa' ? 'atingido' : 'pendente'} />
+                    </div>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="space-y-1">
+                        <span className="text-muted-foreground">Período:</span>
+                        <div className="font-medium">
+                          {formatarData(campanha.data_inicio)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          até {formatarData(campanha.data_fim)}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-muted-foreground">Tipo:</span>
+                        <div className="font-medium capitalize flex items-center gap-1">
+                          {campanha.tipo_meta === 'quantidade' ? (
+                            <><Target size={12} /> Quantidade</>
+                          ) : (
+                            <><TrendingUp size={12} /> Valor</>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
-                  <div className="flex gap-2">
-                    <Button variant="secondary" size="sm" onClick={() => {
-                setView('detalhes');
-                buscarDetalheCampanha(campanha.id);
-              }} className="flex-1 gap-1">
-                      <Eye size={14} />
-                      Detalhes
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-1" onClick={() => iniciarEdicaoCampanha(campanha)}>
-                      <Edit size={14} />
-                      Editar
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>;
-      })}
-        </div>}
+                    {!campanha.sem_metas && (
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Progresso</span>
+                          <span className="font-medium">{progresso.percentualRealizado.toFixed(1)}%</span>
+                        </div>
+                        <Progress value={progresso.percentualRealizado} className="h-2" />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>{formatarValor(progresso.realizado, campanha.tipo_meta)} realizado</span>
+                          <span>Meta: {formatarValor(progresso.meta, campanha.tipo_meta)}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 pt-2 border-t">
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={() => {
+                          setView('detalhes');
+                          buscarDetalheCampanha(campanha.id);
+                        }} 
+                        className="flex-1 gap-1"
+                      >
+                        <Eye size={14} />
+                        Detalhes
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="gap-1" 
+                        onClick={() => iniciarEdicaoCampanha(campanha)}
+                      >
+                        <Edit size={14} />
+                        Editar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>;
   const renderDetalhes = () => {
     if (!campanhaSelecionada) return null;
@@ -1684,17 +1832,30 @@ export default function Campanhas() {
         </Card>
 
         {/* Botões de ação */}
-        <div className="flex gap-4">
+        <div className="flex justify-between items-center">
+          <div className="flex gap-4">
+            <Button
+              onClick={salvarEdicaoCampanha}
+              disabled={editandoCampanha}
+              className="gap-2"
+            >
+              <CheckCircle size={16} />
+              {editandoCampanha ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+            <Button variant="outline" onClick={() => setView('lista')}>
+              Cancelar
+            </Button>
+          </div>
+          
+          {/* Botão de exclusão - só aparece para admins */}
           <Button
-            onClick={salvarEdicaoCampanha}
+            variant="destructive"
+            onClick={() => excluirCampanha(campanhaEditando.id)}
             disabled={editandoCampanha}
             className="gap-2"
           >
-            <CheckCircle size={16} />
-            {editandoCampanha ? 'Salvando...' : 'Salvar Alterações'}
-          </Button>
-          <Button variant="outline" onClick={() => setView('lista')}>
-            Cancelar
+            <X size={16} />
+            Excluir Campanha
           </Button>
         </div>
       </div>
