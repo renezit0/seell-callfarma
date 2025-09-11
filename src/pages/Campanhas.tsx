@@ -1341,48 +1341,69 @@ export default function Campanhas() {
                   </Button>
                 </div>
               </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {lojasParticipantes.map(lojaParticipante => {
-              const loja = lojasDisponiveis.find(l => l.id === lojaParticipante.loja_id);
-              return <div key={lojaParticipante.loja_id} className="p-3 border rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="font-medium">
-                          {loja?.numero} - {loja?.nome}
-                        </div>
-                        <Button variant="destructive" size="sm" onClick={() => removerLoja(lojaParticipante.loja_id)}>
-                          Remover
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <Label className="text-xs">Grupo</Label>
-                          <Select value={lojaParticipante.grupo_id} onValueChange={value => {
-                      setLojasParticipantes(prev => prev.map(l => l.loja_id === lojaParticipante.loja_id ? {
-                        ...l,
-                        grupo_id: value
-                      } : l));
-                    }}>
-                            <SelectTrigger className="h-8">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="1">Grupo 1</SelectItem>
-                              <SelectItem value="2">Grupo 2</SelectItem>
-                              <SelectItem value="3">Grupo 3</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label className="text-xs">Meta Quantidade</Label>
-                          <Input type="number" placeholder="0" className="h-8" value={lojaParticipante.meta_quantidade} onChange={e => atualizarMetaLoja(lojaParticipante.loja_id, 'meta_quantidade', parseInt(e.target.value) || 0)} />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Meta Valor</Label>
-                          <Input type="text" inputMode="decimal" placeholder="0,00" className="h-8" value={lojaParticipante.meta_valor} onChange={e => atualizarMetaLoja(lojaParticipante.loja_id, 'meta_valor', parseFloat(e.target.value.replace(',', '.')) || 0)} />
-                        </div>
-                      </div>
-                    </div>;
-            })}
+              <div className="grid gap-6 md:grid-cols-3">
+                {/* Renderizar cada grupo separadamente */}
+                {[1, 2, 3].map(grupoNumero => {
+                  const lojasDoGrupo = lojasParticipantes.filter(lojaParticipante => lojaParticipante.grupo_id === grupoNumero.toString());
+                  
+                  return (
+                    <Card key={grupoNumero} className="h-fit">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <Trophy className="h-4 w-4" />
+                          Grupo {grupoNumero}
+                          <Badge variant="secondary">{lojasDoGrupo.length}</Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {lojasDoGrupo.length === 0 ? (
+                          <div className="text-sm text-muted-foreground text-center py-4">
+                            Nenhuma loja neste grupo
+                          </div>
+                        ) : (
+                          lojasDoGrupo.map(lojaParticipante => {
+                            const loja = lojasDisponiveis.find(l => l.id === lojaParticipante.loja_id);
+                            return (
+                              <div key={lojaParticipante.loja_id} className="p-3 border rounded-lg space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="font-medium text-sm">
+                                    {loja?.numero} - {loja?.nome}
+                                  </div>
+                                  <Button variant="destructive" size="sm" onClick={() => removerLoja(lojaParticipante.loja_id)}>
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                <div className="space-y-2">
+                                  <div>
+                                    <Label className="text-xs">Meta Quantidade</Label>
+                                    <Input 
+                                      type="number" 
+                                      placeholder="0" 
+                                      className="h-8" 
+                                      value={lojaParticipante.meta_quantidade} 
+                                      onChange={e => atualizarMetaLoja(lojaParticipante.loja_id, 'meta_quantidade', parseInt(e.target.value) || 0)} 
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs">Meta Valor (R$)</Label>
+                                    <Input 
+                                      type="text" 
+                                      inputMode="decimal" 
+                                      placeholder="0,00" 
+                                      className="h-8" 
+                                      value={lojaParticipante.meta_valor} 
+                                      onChange={e => atualizarMetaLoja(lojaParticipante.loja_id, 'meta_valor', parseFloat(e.target.value.replace(',', '.')) || 0)} 
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>}
         </CardContent>
@@ -1547,43 +1568,86 @@ export default function Campanhas() {
               </Button>
             </div>
 
-            {/* Lista de lojas participantes */}
-            {lojasParticipantes.length > 0 && <div className="space-y-2 max-h-60 overflow-y-auto">
-                {lojasParticipantes.map((loja, index) => {
-              const lojaInfo = lojasDisponiveis.find(l => l.id === loja.loja_id);
-              return <Card key={index} className="p-3">
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <div>
-                          <span className="font-medium">{lojaInfo?.numero}</span>
-                          <p className="text-sm text-muted-foreground">{lojaInfo?.nome}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Meta Quantidade</Label>
-                          <Input type="number" value={loja.meta_quantidade} onChange={e => {
-                      const novasLojas = [...lojasParticipantes];
-                      novasLojas[index].meta_quantidade = parseInt(e.target.value) || 0;
-                      setLojasParticipantes(novasLojas);
-                    }} className="h-8" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Meta Valor (R$)</Label>
-                          <Input type="text" inputMode="decimal" value={loja.meta_valor} onChange={e => {
-                      const novasLojas = [...lojasParticipantes];
-                      const valor = parseFloat(e.target.value.replace(',', '.')) || 0;
-                      novasLojas[index].meta_valor = valor;
-                      setLojasParticipantes(novasLojas);
-                    }} className="h-8" />
-                        </div>
-                        <Button variant="destructive" size="sm" onClick={() => {
-                    const novasLojas = lojasParticipantes.filter((_, i) => i !== index);
-                    setLojasParticipantes(novasLojas);
-                  }}>
-                          <X size={14} />
-                        </Button>
-                      </div>
-                    </Card>;
-            })}
-              </div>}
+            {/* Lista de lojas participantes organizada por grupos */}
+            {lojasParticipantes.length > 0 && (
+              <div className="grid gap-6 md:grid-cols-3">
+                {/* Renderizar cada grupo separadamente */}
+                {[1, 2, 3].map(grupoNumero => {
+                  const lojasDoGrupo = lojasParticipantes.filter(loja => loja.grupo_id === grupoNumero.toString());
+                  
+                  return (
+                    <Card key={grupoNumero} className="h-fit">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <Trophy className="h-4 w-4" />
+                          Grupo {grupoNumero}
+                          <Badge variant="secondary">{lojasDoGrupo.length}</Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {lojasDoGrupo.length === 0 ? (
+                          <div className="text-sm text-muted-foreground text-center py-4">
+                            Nenhuma loja neste grupo
+                          </div>
+                        ) : (
+                          lojasDoGrupo.map((loja, index) => {
+                            const lojaInfo = lojasDisponiveis.find(l => l.id === loja.loja_id);
+                            const globalIndex = lojasParticipantes.findIndex(l => l.loja_id === loja.loja_id);
+                            
+                            return (
+                              <div key={globalIndex} className="p-3 border rounded-lg space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <span className="font-medium text-sm">{lojaInfo?.numero}</span>
+                                    <p className="text-xs text-muted-foreground">{lojaInfo?.nome}</p>
+                                  </div>
+                                  <Button variant="destructive" size="sm" onClick={() => {
+                                    const novasLojas = lojasParticipantes.filter((_, i) => i !== globalIndex);
+                                    setLojasParticipantes(novasLojas);
+                                  }}>
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                <div className="space-y-2">
+                                  <div>
+                                    <Label className="text-xs">Meta Quantidade</Label>
+                                    <Input 
+                                      type="number" 
+                                      value={loja.meta_quantidade} 
+                                      onChange={e => {
+                                        const novasLojas = [...lojasParticipantes];
+                                        novasLojas[globalIndex].meta_quantidade = parseInt(e.target.value) || 0;
+                                        setLojasParticipantes(novasLojas);
+                                      }} 
+                                      className="h-8" 
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs">Meta Valor (R$)</Label>
+                                    <Input 
+                                      type="text" 
+                                      inputMode="decimal" 
+                                      value={loja.meta_valor} 
+                                      onChange={e => {
+                                        const novasLojas = [...lojasParticipantes];
+                                        const valor = parseFloat(e.target.value.replace(',', '.')) || 0;
+                                        novasLojas[globalIndex].meta_valor = valor;
+                                        setLojasParticipantes(novasLojas);
+                                      }} 
+                                      className="h-8" 
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Dropdown para adicionar lojas */}
             <div className="space-y-2">
@@ -1597,7 +1661,7 @@ export default function Campanhas() {
                   codigo_loja: parseInt(loja.numero),
                   meta_quantidade: 0,
                   meta_valor: 0,
-                  grupo_id: '1' // Grupo padrão, será ajustado conforme a loja
+                  grupo_id: (loja.grupo_id ?? 1).toString()
                 }]);
               }
             }}>
