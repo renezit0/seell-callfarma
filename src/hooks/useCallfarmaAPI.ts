@@ -843,6 +843,46 @@ export const useCallfarmaAPI = () => {
     }
   };
 
+  const buscarVendasPorProduto = async (params: {
+    dataInicio: string;
+    dataFim: string;
+    codigosProdutos: string; // códigos separados por vírgula
+    cdfil?: number;
+  }) => {
+    setLoading(true);
+    try {
+      console.log('🔍 Buscando vendas por produto:', params);
+      
+      const { data } = await supabase.functions.invoke('callfarma-vendas', {
+        body: {
+          endpoint: '/financeiro/vendas-por-funcionario',
+          params: {
+            dataIni: params.dataInicio,
+            dataFim: params.dataFim,
+            filtroProduto: params.codigosProdutos,
+            groupBy: 'scefilial.CDFIL,scefun.CDFUN',
+            orderBy: 'scefun.NOME asc',
+            ...(params.cdfil && { filtroFiliais: params.cdfil.toString() })
+          }
+        }
+      });
+
+      console.log('✅ Dados de vendas por produto recebidos:', data?.msg?.length || 0, 'registros');
+      return data?.msg || [];
+      
+    } catch (error) {
+      console.error('❌ Erro ao buscar vendas por produto:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao buscar vendas por produto da API externa",
+        variant: "destructive",
+      });
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     buscarVendasFuncionarios,
@@ -854,6 +894,7 @@ export const useCallfarmaAPI = () => {
     buscarFamilias,
     buscarGrupos,
     buscarMarcas,
-    buscarFornecedores
+    buscarFornecedores,
+    buscarVendasPorProduto
   };
 };

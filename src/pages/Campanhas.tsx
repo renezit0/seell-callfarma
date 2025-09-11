@@ -85,7 +85,7 @@ interface CampanhaDetalhada extends Campanha {
 
 export default function Campanhas() {
   const periodoAtual = usePeriodoAtual();
-  const [view, setView] = useState<'lista' | 'detalhes' | 'criar' | 'vendas-funcionarios'>('lista');
+  const [view, setView] = useState<'lista' | 'detalhes' | 'criar' | 'vendas-funcionarios' | 'pesquisar-produtos'>('lista');
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const [campanhaSelecionada, setCampanhaSelecionada] = useState<CampanhaDetalhada | null>(null);
   const [incluirInativas, setIncluirInativas] = useState(false);
@@ -95,8 +95,12 @@ export default function Campanhas() {
     dataInicio: periodoAtual.dataInicio.toISOString().split('T')[0],
     dataFim: periodoAtual.dataFim.toISOString().split('T')[0]
   });
+  // Estados para pesquisa por produtos
+  const [codigosProdutos, setCodigosProdutos] = useState('23319, 52682, 58033, 60423, 60424, 60425, 60426, 60427, 60428, 61855, 61856, 62335, 64489, 75790, 75791, 77826');
+  const [resultadosProdutos, setResultadosProdutos] = useState<any[]>([]);
+  const [loadingProdutos, setLoadingProdutos] = useState(false);
   const { toast } = useToast();
-  const { buscarVendasCampanha } = useCallfarmaAPI();
+  const { buscarVendasCampanha, buscarVendasPorProduto } = useCallfarmaAPI();
 
   useEffect(() => {
     if (view === 'lista') {
@@ -368,6 +372,41 @@ export default function Campanhas() {
     }
   };
 
+  const buscarProdutos = async () => {
+    setLoadingProdutos(true);
+    try {
+      const codigosLimpos = codigosProdutos
+        .split(',')
+        .map(c => c.trim())
+        .filter(c => c)
+        .join(',');
+
+      console.log('🔍 Buscando vendas para os produtos:', codigosLimpos);
+
+      const resultados = await buscarVendasPorProduto({
+        dataInicio: filtroData.dataInicio,
+        dataFim: filtroData.dataFim,
+        codigosProdutos: codigosLimpos
+      });
+
+      setResultadosProdutos(resultados);
+      
+      toast({
+        title: "Sucesso",
+        description: `Encontrados ${resultados.length} registros de vendas`,
+      });
+    } catch (error) {
+      console.error('Erro ao buscar produtos:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao buscar dados dos produtos",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingProdutos(false);
+    }
+  };
+
   const calcularProgresso = (realizado: number, meta: number, dataInicio: string, dataFim: string) => {
     const hoje = new Date();
     const inicio = new Date(dataInicio);
@@ -434,6 +473,14 @@ export default function Campanhas() {
           >
             <Users size={16} />
             Vendas API Externa
+          </Button>
+          <Button 
+            onClick={() => setView('pesquisar-produtos')} 
+            variant="outline" 
+            className="gap-2"
+          >
+            <Trophy size={16} />
+            Pesquisar Produtos
           </Button>
         </div>
       </div>
@@ -794,12 +841,185 @@ export default function Campanhas() {
     </div>
   );
 
+  const renderPesquisarProdutos = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" onClick={() => setView('lista')} className="gap-2">
+            <ArrowLeft size={16} />
+            Voltar
+          </Button>
+          <h1 className="text-3xl font-bold">Pesquisar Vendas por Produtos</h1>
+        </div>
+      </div>
+
+      {/* Filtros de pesquisa */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtros de Pesquisa</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="dataInicioProdutos">Data Início</Label>
+              <Input
+                id="dataInicioProdutos"
+                type="date"
+                value={filtroData.dataInicio}
+                onChange={(e) => setFiltroData(prev => ({ ...prev, dataInicio: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="dataFimProdutos">Data Fim</Label>
+              <Input
+                id="dataFimProdutos"
+                type="date"
+                value={filtroData.dataFim}
+                onChange={(e) => setFiltroData(prev => ({ ...prev, dataFim: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="codigosProdutos">Códigos dos Produtos (separados por vírgula)</Label>
+            <Textarea
+              id="codigosProdutos"
+              placeholder="Ex: 23319, 52682, 58033, 60423..."
+              value={codigosProdutos}
+              onChange={(e) => setCodigosProdutos(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <Button onClick={buscarProdutos} disabled={loadingProdutos}>
+            {loadingProdutos ? 'Buscando...' : 'Buscar Produtos'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Resultados */}
+      {resultadosProdutos.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Resultados da Pesquisa ({resultadosProdutos.length} registros)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border">
+                <thead>
+                  <tr className="bg-muted">
+                    <th className="border p-2 text-left">Loja</th>
+                    <th className="border p-2 text-left">Funcionário</th>
+                    <th className="border p-2 text-left">Produto</th>
+                    <th className="border p-2 text-left">Data</th>
+                    <th className="border p-2 text-right">Qtd</th>
+                    <th className="border p-2 text-right">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resultadosProdutos.map((item, index) => (
+                    <tr key={index} className="hover:bg-muted/50">
+                      <td className="border p-2">
+                        <div>
+                          <div className="font-medium">{item.NOMEFIL}</div>
+                          <div className="text-sm text-muted-foreground">CDFIL: {item.CDFIL}</div>
+                        </div>
+                      </td>
+                      <td className="border p-2">
+                        <div>
+                          <div className="font-medium">{item.NOMEFUN}</div>
+                          <div className="text-sm text-muted-foreground">CPF: {item.CPFFUN}</div>
+                        </div>
+                      </td>
+                      <td className="border p-2">
+                        <div>
+                          <div className="font-medium">{item.NOMEPRODU}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Código: {item.CDPRODU} | Grupo: {item.NOMEGRUPO}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Marca: {item.NOMEMARCA}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="border p-2">
+                        {new Date(item.DATA).toLocaleDateString('pt-BR')}
+                      </td>
+                      <td className="border p-2 text-right">
+                        <div>{item.TOTAL_QTD_VE} un</div>
+                        {item.TOTAL_QTD_DV > 0 && (
+                          <div className="text-sm text-red-500">Devol: {item.TOTAL_QTD_DV}</div>
+                        )}
+                      </td>
+                      <td className="border p-2 text-right">
+                        <div className="font-medium">
+                          {new Intl.NumberFormat('pt-BR', { 
+                            style: 'currency', 
+                            currency: 'BRL' 
+                          }).format(item.TOTAL_VLR_VE)}
+                        </div>
+                        {item.TOTAL_VLR_DV > 0 && (
+                          <div className="text-sm text-red-500">
+                            Devol: {new Intl.NumberFormat('pt-BR', { 
+                              style: 'currency', 
+                              currency: 'BRL' 
+                            }).format(item.TOTAL_VLR_DV)}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Resumo */}
+            <div className="mt-4 p-4 bg-muted rounded-lg">
+              <h3 className="font-semibold mb-2">Resumo</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <div className="text-muted-foreground">Total de Registros</div>
+                  <div className="font-medium">{resultadosProdutos.length}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Quantidade Total</div>
+                  <div className="font-medium">
+                    {resultadosProdutos.reduce((sum, item) => sum + (item.TOTAL_QTD_VE || 0), 0)} un
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Valor Total</div>
+                  <div className="font-medium">
+                    {new Intl.NumberFormat('pt-BR', { 
+                      style: 'currency', 
+                      currency: 'BRL' 
+                    }).format(resultadosProdutos.reduce((sum, item) => sum + (item.TOTAL_VLR_VE || 0), 0))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {resultadosProdutos.length === 0 && !loadingProdutos && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Info className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">
+              Use os filtros acima para pesquisar vendas por produtos específicos.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+
   return (
     <div className="page-container min-h-screen bg-background p-6">
       {view === 'lista' && renderLista()}
       {view === 'detalhes' && renderDetalhes()}
       {view === 'criar' && renderCriar()}
       {view === 'vendas-funcionarios' && renderVendasFuncionarios()}
+      {view === 'pesquisar-produtos' && renderPesquisarProdutos()}
     </div>
   );
 }
