@@ -749,7 +749,7 @@ export default function Campanhas() {
           realizado_quantidade: (vendaApiExterna?.TOTAL_QUANTIDADE || 0) - (vendaApiExterna?.TOTAL_QTD_DV || 0),
           realizado_valor: (vendaApiExterna?.TOTAL_VALOR || 0) - (vendaApiExterna?.TOTAL_VLR_DV || 0),
           percentual_meta: meta > 0 ? realizado / meta * 100 : 0,
-          grupo_nome: participante.grupo_id,
+          grupo_nome: String(participante.grupo_id ?? '1'),
           grupo_cor: undefined
         };
       });
@@ -983,9 +983,9 @@ export default function Campanhas() {
                       </div>}
 
                     <div className="flex gap-2 pt-2 border-t">
-                      <Button variant="secondary" size="sm" onClick={() => {
+                      <Button variant="secondary" size="sm" onClick={async () => {
+                  await buscarDetalheCampanha(campanha.id);
                   setView('detalhes');
-                  buscarDetalheCampanha(campanha.id);
                 }} className="flex-1 gap-1">
                         <Eye size={14} />
                         Detalhes
@@ -1002,7 +1002,14 @@ export default function Campanhas() {
         </div>}
     </div>;
   const renderDetalhes = () => {
-    if (!campanhaSelecionada) return null;
+    if (!campanhaSelecionada) {
+      return (
+        <div className="space-y-4">
+          <div className="h-6 w-48 bg-muted rounded animate-pulse" />
+          <div className="h-32 w-full bg-muted rounded animate-pulse" />
+        </div>
+      );
+    }
     return <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
