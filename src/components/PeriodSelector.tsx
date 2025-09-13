@@ -3,6 +3,7 @@ import { Calendar, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriodContext, type PeriodOption } from "@/contexts/PeriodContext";
 import { usePeriodoAtual } from "@/hooks/usePeriodoAtual";
@@ -93,25 +94,40 @@ export function PeriodSelector() {
       </DropdownMenuTrigger>
       
       <DropdownMenuContent align="end" className="w-64 bg-background border-border shadow-lg z-50 p-1">
-        {periods.map(period => <DropdownMenuItem key={period.id} onClick={() => handlePeriodSelect(period)} className="flex items-center justify-between py-3 px-4 hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-sm">
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-foreground">
+        {periods.map((period, index) => (
+          <>
+            <DropdownMenuItem 
+              key={period.id} 
+              onClick={() => handlePeriodSelect(period)} 
+              className={`flex items-center justify-between py-3 px-4 cursor-pointer rounded-sm ${
+                selectedPeriod?.id === period.id 
+                  ? 'bg-primary/10 text-primary font-medium hover:bg-primary/15' 
+                  : 'hover:bg-muted hover:text-muted-foreground'
+              }`}
+            >
+              <span className="text-sm">
                 {period.label}
               </span>
-               
-              {period.description}
-            </div>
-            <div className="flex items-center gap-2">
-              {period.status === 'current' && <Badge variant="secondary" className="bg-success/10 text-success border-success/20 text-xs">
-                  Atual
-                </Badge>}
-              {selectedPeriod?.id === period.id && <div className="w-2 h-2 bg-primary rounded-full" />}
-            </div>
-          </DropdownMenuItem>)}
+              <div className="flex items-center gap-2">
+                {period.status === 'current' && (
+                  <Badge variant="secondary" className="bg-success/10 text-success border-success/20 text-xs">
+                    Atual
+                  </Badge>
+                )}
+                {selectedPeriod?.id === period.id && (
+                  <div className="w-2 h-2 bg-primary rounded-full" />
+                )}
+              </div>
+            </DropdownMenuItem>
+            {index < periods.length - 1 && <Separator className="my-1" />}
+          </>
+        ))}
         
-        {periods.length === 0 && <div className="px-4 py-3 text-center text-sm text-muted-foreground">
+        {periods.length === 0 && (
+          <div className="px-4 py-3 text-center text-sm text-muted-foreground">
             Nenhum período ativo encontrado
-          </div>}
+          </div>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>;
 }
