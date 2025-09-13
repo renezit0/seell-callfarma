@@ -100,7 +100,7 @@ export function PeriodSelector() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 bg-background border-border hover:bg-accent hover:text-accent-foreground">
+        <Button variant="outline" size="sm" className="h-9 bg-background border-border hover:bg-muted hover:text-foreground">
           <Calendar className="w-4 h-4 mr-2" />
           <span className="hidden sm:inline">{selectedPeriod?.label || 'Selecionar período'}</span>
           <span className="sm:hidden">Período</span>
@@ -116,7 +116,7 @@ export function PeriodSelector() {
           <DropdownMenuItem
             key={period.id}
             onClick={() => handlePeriodSelect(period)}
-            className="flex items-center justify-between py-3 px-4 hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-sm"
+            className="flex items-center justify-between py-3 px-4 hover:bg-muted hover:text-foreground cursor-pointer rounded-sm"
           >
             <div className="flex flex-col">
               <span className="text-sm font-medium text-foreground">
