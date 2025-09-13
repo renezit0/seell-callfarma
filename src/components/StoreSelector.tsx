@@ -119,11 +119,9 @@ export function StoreSelector({ selectedLojaId, onLojaChange, userLojaId }: Stor
         variant="outline"
         className={cn(
           "relative overflow-hidden transition-all duration-300 ease-out w-full sm:w-auto",
-          "bg-gradient-to-r from-success/10 to-success/5 hover:from-success/20 hover:to-success/10",
-          "border-success/30 hover:border-success/50 text-success hover:text-success",
-          "shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0",
-          "before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent",
-          "before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700"
+          "bg-muted/50 hover:bg-muted",
+          "border-border hover:border-primary/50 text-foreground hover:text-primary",
+          "shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
         )}
       >
         <Store className="w-4 h-4 mr-2" />
