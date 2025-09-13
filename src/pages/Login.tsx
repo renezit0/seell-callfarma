@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
-import logoImage from '@/assets/seell-logo.png';
+import miniIconWhite from '@/assets/mini-icon-white.png';
 
 export default function Login() {
   const [login, setLogin] = useState('');
@@ -78,7 +78,7 @@ export default function Login() {
           {/* Logo */}
           <div className="text-center mb-8">
             <img 
-              src={logoImage} 
+              src={miniIconWhite} 
               alt="seeLL" 
               className="logo-img mx-auto hover-scale transition-transform duration-300"
             />
