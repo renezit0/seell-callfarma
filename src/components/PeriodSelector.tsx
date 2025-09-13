@@ -77,7 +77,7 @@ export function PeriodSelector() {
     setSelectedPeriod(period);
   };
   if (loading) {
-    return <Button variant="outline" size="sm" className="h-9" disabled>
+    return <Button variant="outline" size="default" className="h-10" disabled>
         <Calendar className="w-4 h-4 mr-2" />
         <span className="hidden sm:inline">Carregando...</span>
         <span className="sm:hidden">...</span>
@@ -85,7 +85,7 @@ export function PeriodSelector() {
   }
   return <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 bg-background border-border hover:bg-accent hover:text-accent-foreground">
+        <Button variant="outline" size="default" className="h-10 bg-background border-border hover:bg-gray-100 hover:text-foreground">
           <Calendar className="w-4 h-4 mr-2" />
           <span className="hidden sm:inline">{selectedPeriod?.label || 'Selecionar período'}</span>
           <span className="sm:hidden">Período</span>
