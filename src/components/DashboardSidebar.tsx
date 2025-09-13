@@ -100,10 +100,11 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
               )}
             >
               <div className={cn(
-                "nav-icon w-10 h-10 rounded-lg bg-sidebar-accent flex items-center transition-all duration-150 flex-shrink-0 justify-center",
+                "nav-icon w-10 h-10 rounded-lg flex items-center transition-all duration-150 flex-shrink-0 justify-center",
                 !className?.includes('expanded') && "group-hover:justify-center",
-                "group-hover:bg-sidebar-primary group-hover:text-sidebar-primary-foreground",
-                isActive && "bg-sidebar-primary text-sidebar-primary-foreground"
+                isActive 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-muted hover:bg-primary hover:text-primary-foreground"
               )}>
                 <i className={`${item.icon} text-base`}></i>
               </div>
