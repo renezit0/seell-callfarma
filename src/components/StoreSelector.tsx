@@ -131,12 +131,12 @@ export function StoreSelector({ selectedLojaId, onLojaChange, userLojaId }: Stor
       </Button>
 
       {isOpen && (
-        <div className="fixed top-0 left-0 w-full h-full bg-black/20 z-[9998]" onClick={() => setIsOpen(false)} />
+        <div className="sm:hidden fixed top-0 left-0 w-full h-full bg-black/10 z-[9998]" onClick={() => setIsOpen(false)} />
       )}
       
       {isOpen && (
-        <div className="fixed sm:absolute top-16 sm:top-full left-2 sm:left-0 mt-2 w-[calc(100%-1rem)] sm:w-96 max-w-sm sm:max-w-none bg-popover border border-border rounded-lg shadow-2xl z-[9999] animate-in slide-in-from-top-2">
-          <div className="p-2 sm:p-3 border-b border-border">
+        <div className="absolute top-full left-0 mt-2 w-full sm:w-96 max-w-sm sm:max-w-none bg-popover border border-border rounded-lg shadow-2xl z-[60] animate-in slide-in-from-top-2">
+          <div className="p-2 sm:p-3 border-b border-border bg-popover">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -145,14 +145,14 @@ export function StoreSelector({ selectedLojaId, onLojaChange, userLojaId }: Stor
                 placeholder="Buscar por nome ou número..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 text-sm"
+                className="pl-10 text-sm bg-background"
               />
             </div>
           </div>
 
-          <div className="max-h-[60vh] sm:max-h-96 overflow-y-auto">
+          <div className="max-h-[60vh] sm:max-h-96 overflow-y-auto bg-popover">
             {/* Opção "Todas as Lojas" */}
-            <div className="p-2">
+            <div className="p-2 bg-popover">
               <button
                 onClick={() => handleLojaSelect(null)}
                 className={cn(
@@ -173,7 +173,7 @@ export function StoreSelector({ selectedLojaId, onLojaChange, userLojaId }: Stor
             </div>
 
             {/* Opção "Minha Loja" */}
-            <div className="p-2">
+            <div className="p-2 bg-popover">
               <button
                 onClick={() => handleLojaSelect(lojas.find(l => l.id === userLojaId)!)}
                 className={cn(
@@ -196,12 +196,12 @@ export function StoreSelector({ selectedLojaId, onLojaChange, userLojaId }: Stor
             </div>
 
             {/* Separador */}
-            <div className="px-2 sm:px-3 py-2 text-xs text-muted-foreground font-medium border-b border-border">
+            <div className="px-2 sm:px-3 py-2 text-xs text-muted-foreground font-medium border-b border-border bg-popover">
               OUTRAS LOJAS
             </div>
 
             {/* Lojas */}
-            <div className="p-2">
+            <div className="p-2 bg-popover">
               {filteredLojas.map((loja) => (
                 <button
                   key={loja.id}
@@ -228,7 +228,7 @@ export function StoreSelector({ selectedLojaId, onLojaChange, userLojaId }: Stor
             </div>
 
             {filteredLojas.length === 0 && (
-              <div className="p-4 sm:p-6 text-center text-muted-foreground">
+              <div className="p-4 sm:p-6 text-center text-muted-foreground bg-popover">
                 <Store className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Nenhuma loja encontrada</p>
               </div>
