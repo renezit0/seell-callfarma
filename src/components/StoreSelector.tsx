@@ -134,11 +134,11 @@ export function StoreSelector({ selectedLojaId, onLojaChange, userLojaId }: Stor
       </Button>
 
       {isOpen && (
-        <div className="sm:hidden fixed top-0 left-0 w-full h-full bg-black/10 z-[9998]" onClick={() => setIsOpen(false)} />
+        <div className="fixed inset-0 z-[999]" onClick={() => setIsOpen(false)} />
       )}
       
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-full sm:w-96 max-w-sm sm:max-w-none bg-popover border border-border rounded-lg shadow-2xl z-[1000] animate-in slide-in-from-top-2">
+        <div className="absolute top-full right-0 mt-2 w-80 bg-popover border border-border rounded-lg shadow-2xl z-[1000] animate-in slide-in-from-top-2">
           <div className="p-2 sm:p-3 border-b border-border bg-popover">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
