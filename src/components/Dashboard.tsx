@@ -111,13 +111,6 @@ function DashboardContent() {
             
             {/* Controles no lado direito em desktop, embaixo em mobile */}
             <div className="flex flex-col sm:flex-row gap-2 sm:items-start">
-              {shouldShowStoreSelector && (
-                <StoreSelector
-                  selectedLojaId={selectedLojaId}
-                  onLojaChange={setSelectedLojaId}
-                  userLojaId={user?.loja_id}
-                />
-              )}
               <PeriodSelector />
               <div className="flex gap-2">
                 <Button variant="outline" className="border-border hover:bg-muted flex-1 sm:flex-none text-xs sm:text-sm">
@@ -146,14 +139,23 @@ function DashboardContent() {
 
       {/* Metrics Grid - Métricas da Loja */}
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-xl flex items-center justify-center">
-            <i className="fas fa-store text-sm sm:text-lg text-green-600"></i>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-xl flex items-center justify-center">
+              <i className="fas fa-store text-sm sm:text-lg text-green-600"></i>
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-foreground">Métricas da Loja</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground">Performance geral da {lojaInfo?.nome || 'loja'}</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-base sm:text-lg font-bold text-foreground">Métricas da Loja</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground">Performance geral da {lojaInfo?.nome || 'loja'}</p>
-          </div>
+          {shouldShowStoreSelector && (
+            <StoreSelector
+              selectedLojaId={selectedLojaId}
+              onLojaChange={setSelectedLojaId}
+              userLojaId={user?.loja_id}
+            />
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:gap-4">

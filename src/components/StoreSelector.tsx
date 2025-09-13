@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { createPortal } from "react-dom";
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,8 +26,6 @@ export function StoreSelector({ selectedLojaId, onLojaChange, userLojaId }: Stor
   const [loading, setLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 0 });
 
   useEffect(() => {
     fetchLojas();
@@ -36,39 +33,16 @@ export function StoreSelector({ selectedLojaId, onLojaChange, userLojaId }: Stor
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node
-      const insideMenu = dropdownRef.current?.contains(target)
-      const insideButton = buttonRef.current?.contains(target)
-      if (!insideMenu && !insideButton) {
-        setIsOpen(false)
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  const computePosition = () => {
-    const btn = buttonRef.current
-    if (!btn) return
-    const rect = btn.getBoundingClientRect()
-    const top = rect.bottom + 8
-    const left = Math.max(8, rect.left)
-    const width = Math.min(window.innerWidth - 16, Math.max(rect.width, 320))
-    setMenuPos({ top, left, width })
-  }
-
-  useEffect(() => {
-    if (!isOpen) return
-    const onResize = () => computePosition()
-    window.addEventListener('resize', onResize)
-    window.addEventListener('scroll', onResize, true)
-    computePosition()
-    return () => {
-      window.removeEventListener('resize', onResize)
-      window.removeEventListener('scroll', onResize, true)
-    }
-  }, [isOpen])
+  
 
   const fetchLojas = async () => {
     try {
@@ -112,7 +86,6 @@ export function StoreSelector({ selectedLojaId, onLojaChange, userLojaId }: Stor
     const opening = !isOpen
     setIsOpen(opening)
     if (opening) {
-      computePosition()
       setTimeout(() => {
         searchInputRef.current?.focus()
       }, 100)
@@ -140,7 +113,7 @@ export function StoreSelector({ selectedLojaId, onLojaChange, userLojaId }: Stor
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <Button
         onClick={handleToggle}
         variant="outline"
@@ -165,7 +138,7 @@ export function StoreSelector({ selectedLojaId, onLojaChange, userLojaId }: Stor
       )}
       
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-full sm:w-96 max-w-sm sm:max-w-none bg-popover border border-border rounded-lg shadow-2xl z-[60] animate-in slide-in-from-top-2">
+        <div className="absolute top-full left-0 mt-2 w-full sm:w-96 max-w-sm sm:max-w-none bg-popover border border-border rounded-lg shadow-2xl z-[1000] animate-in slide-in-from-top-2">
           <div className="p-2 sm:p-3 border-b border-border bg-popover">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
