@@ -53,7 +53,7 @@ export function MetasLojas({ metas, canEdit, onUpdateMeta }: MetasLojasProps) {
   const getCategoriaLabel = (categoria: string) => {
     const labels: Record<string, string> = {
       'geral': 'Geral',
-      'r_mais': 'R+ (Receita)',
+      'r_mais': 'Rentáveis',
       'perfumaria_r_mais': 'Perfumaria R+',
       'conveniencia_r_mais': 'Conveniência R+',
       'saude': 'Saúde',
