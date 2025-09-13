@@ -22,20 +22,22 @@ import Usuarios from "./pages/Usuarios";
 import EditarUsuario from "./pages/EditarUsuario";
 import Configuracoes from "./pages/Configuracoes";
 import Rankings from "./pages/Rankings";
-
 import Graficos from "./pages/Graficos";
 import Escala from "./pages/Escala";
 import EscalaConsolidada from "./pages/EscalaConsolidada";
 import NotFound from "./pages/NotFound";
-
 const queryClient = new QueryClient();
-
 function AppContent() {
-  const { user, loading } = useAuth();
-  const { avatarUrl } = useUserAvatar();
+  const {
+    user,
+    loading
+  } = useAuth();
+  const {
+    avatarUrl
+  } = useUserAvatar();
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const location = useLocation();
-  
+
   // Apply user theme
   useUserTheme();
 
@@ -46,7 +48,6 @@ function AppContent() {
         setSidebarExpanded(false);
       }
     };
-
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -59,7 +60,6 @@ function AppContent() {
         setSidebarExpanded(false);
       }
     };
-
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [sidebarExpanded]);
@@ -73,18 +73,15 @@ function AppContent() {
   // Se ainda está carregando, mostrar loading
   if (loading) {
     console.log('⏳ Mostrando tela de loading...');
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+    return <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="loading-container text-center">
           <div className="loading-spinner animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <div className="loading-text text-foreground">
             Carregando<span className="dot-animation">...</span>
           </div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
 
   // Se não está logado e não está na página de login, redirecionar para login
   if (!user && !isLoginPage) {
@@ -97,32 +94,17 @@ function AppContent() {
     console.log('🔄 Redirecionando para dashboard (usuário logado na página de login)');
     return <Navigate to="/" replace />;
   }
-
-  return (
-    <div className="min-h-screen w-full bg-background">
-      {user && (
-        <>
+  return <div className="min-h-screen w-full bg-background">
+      {user && <>
           <DashboardSidebar className={`${sidebarExpanded ? 'expanded' : ''}`} />
           {/* Mobile overlay */}
-          <div 
-            className={`lg:hidden fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 ${
-              sidebarExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`} 
-            onClick={() => setSidebarExpanded(false)} 
-          />
-        </>
-      )}
+          <div className={`lg:hidden fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 ${sidebarExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setSidebarExpanded(false)} />
+        </>}
       
-      <main className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${
-        user ? 'lg:ml-16' : ''
-      }`}>
-        {user && (
-          <header className="header fixed top-0 left-0 lg:left-16 right-0 z-40 flex h-16 items-center justify-between border-b bg-background px-4 lg:px-6">
+      <main className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${user ? 'lg:ml-16' : ''}`}>
+        {user && <header className="header fixed top-0 left-0 lg:left-16 right-0 z-40 flex h-16 items-center justify-between border-b bg-background px-4 lg:px-6">
           <div className="flex items-center gap-4">
-            <button 
-              className="menu-toggle lg:hidden p-2 rounded-md hover:bg-muted transition-colors"
-              onClick={() => setSidebarExpanded(!sidebarExpanded)}
-            >
+            <button onClick={() => setSidebarExpanded(!sidebarExpanded)} className="menu-toggle lg:hidden p-2 transition-colors text-base rounded-lg text-slate-200 font-thin text-left bg-gray-300 hover:bg-gray-200">
               <i className="fas fa-bars text-foreground"></i>
             </button>
             <h1 className="page-title text-lg font-semibold md:text-xl">Dashboard</h1>
@@ -132,13 +114,7 @@ function AppContent() {
             {/* Dados do usuário */}
             <div className="flex items-center gap-3">
               <Avatar className="w-8 h-8 flex-shrink-0">
-                {avatarUrl ? (
-                  <AvatarImage 
-                    src={avatarUrl} 
-                    alt={`Avatar de ${user?.nome}`}
-                    className="object-cover"
-                  />
-                ) : null}
+                {avatarUrl ? <AvatarImage src={avatarUrl} alt={`Avatar de ${user?.nome}`} className="object-cover" /> : null}
                 <AvatarFallback className="bg-primary text-primary-foreground font-bold text-sm">
                   {user?.nome?.charAt(0) || "U"}
                 </AvatarFallback>
@@ -163,8 +139,7 @@ function AppContent() {
               </button>
             </div>
           </div>
-          </header>
-        )}
+          </header>}
         
         <div className={`content-area flex-1 ${user ? 'pt-16' : ''}`}>
           <Routes>
@@ -187,12 +162,9 @@ function AppContent() {
           </Routes>
         </div>
       </main>
-    </div>
-  );
+    </div>;
 }
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+const App = () => <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <BrowserRouter>
         <PeriodProvider>
@@ -202,7 +174,5 @@ const App = () => (
         </PeriodProvider>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>
-);
-
+  </QueryClientProvider>;
 export default App;
