@@ -118,10 +118,10 @@ export function StoreSelector({ selectedLojaId, onLojaChange, userLojaId }: Stor
         onClick={handleToggle}
         variant="outline"
         className={cn(
-          "relative overflow-hidden transition-all duration-300 ease-out w-full sm:w-auto",
-          "bg-muted/50 hover:bg-muted",
-          "border-border hover:border-primary/50 text-foreground hover:text-primary",
-          "shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
+          "relative overflow-hidden transition-all duration-200 ease-out flex items-center gap-2",
+          "bg-success text-white border-0 px-4 py-2.5 rounded-lg cursor-pointer text-sm font-medium",
+          "hover:bg-success/90 hover:shadow-lg hover:-translate-y-0.5",
+          "shadow-md active:translate-y-0 active:shadow-sm"
         )}
       >
         <Store className="w-4 h-4 mr-2" />
