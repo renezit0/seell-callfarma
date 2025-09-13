@@ -12,7 +12,9 @@ export type UserType =
   | 'aux1'
   | 'aux_conveniencia'
   | 'consultora'
-  | 'farmaceutico';
+  | 'farmaceutico'
+  | 'compras'
+  | 'supervisor';
 
 /**
  * Função para obter descrição amigável do tipo de usuário
@@ -28,7 +30,9 @@ export function getDescricaoTipoUsuario(tipo: string): string {
     'aux1': 'Auxiliar de Farmácia I',
     'aux_conveniencia': 'Auxiliar de Farmácia - Conveniência',
     'consultora': 'Consultora de Beleza',
-    'farmaceutico': 'Farmacêutico'
+    'farmaceutico': 'Farmacêutico',
+    'compras': 'Compras',
+    'supervisor': 'Supervisor'
   };
   
   return descricoes[tipo] ?? tipo.charAt(0).toUpperCase() + tipo.slice(1);
@@ -48,7 +52,9 @@ export function getCorTipoUsuario(tipo: string): string {
     'auxiliar': 'bg-blue-500 hover:bg-blue-600 text-white border-0',
     'aux1': 'bg-blue-400 hover:bg-blue-500 text-white border-0',
     'aux_conveniencia': 'bg-orange-500 hover:bg-orange-600 text-white border-0',
-    'consultora': 'bg-pink-500 hover:bg-pink-600 text-white border-0'
+    'consultora': 'bg-pink-500 hover:bg-pink-600 text-white border-0',
+    'compras': 'bg-purple-600 hover:bg-purple-700 text-white border-0',
+    'supervisor': 'bg-indigo-600 hover:bg-indigo-700 text-white border-0'
   };
   
   return cores[tipo] || 'bg-gray-500 hover:bg-gray-600 text-white border-0';
@@ -62,6 +68,8 @@ export function getTiposUsuario() {
     { value: 'admin', label: 'Administrador' },
     { value: 'gerente', label: 'Gerente' },
     { value: 'lider', label: 'Gerente Loja' },
+    { value: 'supervisor', label: 'Supervisor' },
+    { value: 'compras', label: 'Compras' },
     { value: 'subgerente', label: 'Farmacêutico - SUB' },
     { value: 'farmaceutico', label: 'Farmacêutico' },
     { value: 'sublider', label: 'Auxiliar de Farmácia II - SUB' },
@@ -76,7 +84,7 @@ export function getTiposUsuario() {
  * Função para verificar se é um tipo de usuário com permissões administrativas
  */
 export function isUserTypeAdmin(tipo: string): boolean {
-  return ['admin', 'gerente', 'lider'].includes(tipo);
+  return ['admin', 'gerente', 'lider', 'compras', 'supervisor'].includes(tipo);
 }
 
 /**
