@@ -99,10 +99,10 @@ export function PeriodSelector() {
             <DropdownMenuItem 
               key={period.id} 
               onClick={() => handlePeriodSelect(period)} 
-              className={`flex items-center justify-between py-3 px-4 cursor-pointer rounded-sm ${
+              className={`flex items-center justify-between py-3 px-4 cursor-pointer rounded-none ${
                 selectedPeriod?.id === period.id 
                   ? 'bg-primary/10 text-primary font-medium hover:bg-primary/15' 
-                  : 'hover:bg-muted hover:text-muted-foreground'
+                  : 'hover:bg-secondary/50 hover:text-foreground'
               }`}
             >
               <span className="text-sm">
