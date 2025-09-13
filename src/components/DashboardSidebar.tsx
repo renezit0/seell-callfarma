@@ -104,7 +104,7 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
                 !className?.includes('expanded') && "group-hover:justify-center",
                 isActive 
                   ? "bg-primary text-primary-foreground" 
-                  : "bg-sidebar-accent hover:bg-primary/20 hover:text-sidebar-foreground"
+                  : "bg-sidebar-accent text-sidebar-foreground"
               )}>
                 <i className={`${item.icon} text-base`}></i>
               </div>
