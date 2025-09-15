@@ -19,6 +19,7 @@ const sidebarItems: SidebarItem[] = [
   { icon: "fas fa-chart-bar", label: "Gráficos", href: "/graficos" },
   { icon: "fas fa-bullseye", label: "Metas", href: "/metas" },
   { icon: "fas fa-store", label: "Metas da Loja", href: "/metas-loja" },
+  { icon: "fas fa-chart-pie", label: "Participação", href: "/participacao" },
   { icon: "fas fa-bullhorn", label: "Campanhas", href: "/campanhas" },
   { icon: "fas fa-trophy", label: "Rankings", href: "/rankings" },
   { icon: "fas fa-file-alt", label: "Relatórios", href: "/relatorios" },
@@ -77,6 +78,14 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
           if (item.href === '/rankings') {
             const canViewRankings = user?.tipo && ['gerente', 'lider', 'sublider', 'subgerente', 'admin', 'supervisor', 'rh'].includes(user.tipo);
             if (!canViewRankings) {
+              return null;
+            }
+          }
+
+          // Verificar permissões para mostrar/ocultar participação
+          if (item.href === '/participacao') {
+            const canViewParticipacao = user?.tipo && ['admin', 'supervisor', 'gerente', 'compras'].includes(user.tipo);
+            if (!canViewParticipacao) {
               return null;
             }
           }

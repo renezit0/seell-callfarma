@@ -40,6 +40,8 @@ export function usePeriodoAtual() {
     return {
       dataInicio,
       dataFim,
+      data_inicio: dataInicio.toISOString().split('T')[0],
+      data_fim: dataFim.toISOString().split('T')[0],
       label: `${String(mesInicio + 1).padStart(2, '0')}/${anoInicio} - ${String(mesFim + 1).padStart(2, '0')}/${anoFim}`
     };
   }, []);
